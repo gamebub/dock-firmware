@@ -61,7 +61,10 @@ void core1_main() {
 }
 
 void tuh_mount_cb(uint8_t dev_addr) {
-    printf("Mounted USB device address=%d\n", dev_addr);
+    uint16_t vid = 0;
+    uint16_t pid = 0;
+    tuh_vid_pid_get(dev_addr, &vid, &pid);
+    printf("Mounted USB device address=%d vid=%x pid=%x\n", dev_addr, vid, pid);
 }
 
 void tuh_umount_cb(uint8_t dev_addr) {
