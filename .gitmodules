@@ -1,3 +1,6 @@
 [submodule "external/tinyusb"]
 	path = external/tinyusb
 	url = git@github.com:hathach/tinyusb.git
+[submodule "external/bluepad32"]
+	path = external/bluepad32
+	url = https://github.com/ricardoquesada/bluepad32

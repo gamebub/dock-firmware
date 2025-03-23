@@ -1,27 +1,42 @@
 #include <stdio.h>
 
 #include "hardware/clocks.h"
+#include "pico/cyw43_arch.h"
 #include "pico/multicore.h"
 #include "pico/stdlib.h"
 #include "pico/time.h"
 #include "tusb.h"
+#include "uni.h"
 
 void cdc_app_task(void);
+
+struct uni_platform* get_my_platform(void);
 
 void core1_main(void);
 
 int main() {
     set_sys_clock_khz(192000, true);
     stdio_init_all();
+    if (cyw43_arch_init()) {
+        printf("Failed to initialize CYW43\n");
+        return -1;
+    }
     sleep_ms(10);
 
     printf("Dock firmware\n");
     multicore_reset_core1();
     multicore_launch_core1(core1_main);
 
-    while (1) {
-        sleep_ms(1000);
-    }
+    // Turn on the LED
+    cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
+
+    // Setup Bluepad32
+    uni_platform_set_custom(get_my_platform());
+    uni_init(0, NULL);
+    btstack_run_loop_execute();
+
+    // Unreachable
+    return 0;
 }
 
 void core1_main() {

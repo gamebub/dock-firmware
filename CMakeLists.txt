@@ -27,21 +27,27 @@ endif()
 set(SRC ${CMAKE_CURRENT_LIST_DIR}/src)
 set(EXTERNAL_DIR ${CMAKE_CURRENT_LIST_DIR}/external)
 
-set(PICO_TINYUSB_PATH ${EXTERNAL_DIR}/tinyusb)
 set(PICO_BOARD pico_w CACHE STRING "Board type")
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
 project(dock-firmware C CXX ASM)
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
+
+set(PICO_TINYUSB_PATH ${EXTERNAL_DIR}/tinyusb)
+set(BTSTACK_ROOT ${PICO_SDK_PATH}/lib/btstack)
+set(BLUEPAD32_ROOT ${EXTERNAL_DIR}/bluepad32)
 
 # Add executable. Default name is the project name, version 0.1
 
 add_executable(dock-firmware
     ${SRC}/main.cpp
+    ${SRC}/bluepad32_platform.cpp
 )
 
 pico_set_program_name(dock-firmware "dock-firmware")
@@ -66,11 +72,22 @@ target_include_directories(dock-firmware PRIVATE
     ${SRC}
 )
 
+# Needed for btstack_config.h / sdkconfig.h
+# so that libbluepad32 can include them
+include_directories(dock-firmware ${SRC})
+
 # Add any user requested libraries
 target_link_libraries(dock-firmware
     pico_multicore
     tinyusb_host
+    pico_stdlib
+    pico_cyw43_arch_none
+    pico_btstack_classic
+    pico_btstack_cyw43
+    bluepad32
 )
+
+add_subdirectory(${BLUEPAD32_ROOT}/src/components/bluepad32 libbluepad32)
 
 pico_add_extra_outputs(dock-firmware)
 
