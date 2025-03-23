@@ -14,6 +14,8 @@ struct uni_platform* get_my_platform(void);
 
 void core1_main(void);
 
+static uint32_t core1_stack[256];
+
 int main() {
     set_sys_clock_khz(192000, true);
     stdio_init_all();
@@ -25,7 +27,7 @@ int main() {
 
     printf("Dock firmware\n");
     multicore_reset_core1();
-    multicore_launch_core1(core1_main);
+    multicore_launch_core1_with_stack(core1_main, core1_stack, sizeof(core1_stack));
 
     // Turn on the LED
     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);

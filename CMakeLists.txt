@@ -60,6 +60,10 @@ target_compile_definitions(dock-firmware PRIVATE
   PICO_DEFAULT_UART=1
   PICO_DEFAULT_UART_TX_PIN=8
   PICO_DEFAULT_UART_RX_PIN=9
+
+  PICO_USE_STACK_GUARDS=1
+  PICO_STACK_SIZE=0x2000
+  PICO_CORE1_STACK_SIZE=0
 )
 
 # Add the standard library to the build
