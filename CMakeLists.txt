@@ -67,6 +67,12 @@ target_compile_definitions(dock-firmware PRIVATE
   PICO_USE_STACK_GUARDS=1
   PICO_STACK_SIZE=0x2000
   PICO_CORE1_STACK_SIZE=0
+
+  # Set system clock to 192 MHz
+  SYS_CLK_HZ=192000000
+  PLL_SYS_VCO_FREQ_HZ=1536000000
+  PLL_SYS_POSTDIV1=4
+  PLL_SYS_POSTDIV2=2
 )
 
 # Add the standard library to the build

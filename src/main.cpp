@@ -20,7 +20,6 @@ void core1_main(void);
 static uint32_t core1_stack[256];
 
 int main() {
-    set_sys_clock_khz(192000, true);
     stdio_init_all();
     if (cyw43_arch_init()) {
         printf("Failed to initialize CYW43\n");
