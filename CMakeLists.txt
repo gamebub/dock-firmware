@@ -42,12 +42,15 @@ pico_sdk_init()
 set(PICO_TINYUSB_PATH ${EXTERNAL_DIR}/tinyusb)
 set(BTSTACK_ROOT ${PICO_SDK_PATH}/lib/btstack)
 set(BLUEPAD32_ROOT ${EXTERNAL_DIR}/bluepad32)
+set(PICO_PIO_USB_PATH ${EXTERNAL_DIR}/Pico-PIO-USB)
 
 # Add executable. Default name is the project name, version 0.1
 
 add_executable(dock-firmware
     ${SRC}/main.cpp
     ${SRC}/bluepad32_platform.cpp
+    ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/dcd_pio_usb.c
+    ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/hcd_pio_usb.c
 )
 
 pico_set_program_name(dock-firmware "dock-firmware")
@@ -89,9 +92,11 @@ target_link_libraries(dock-firmware
     pico_btstack_classic
     pico_btstack_cyw43
     bluepad32
+    pico_pio_usb
 )
 
 add_subdirectory(${BLUEPAD32_ROOT}/src/components/bluepad32 libbluepad32)
+add_subdirectory(${PICO_PIO_USB_PATH} ${CMAKE_BINARY_DIR}/Pico-PIO-USB)
 
 pico_add_extra_outputs(dock-firmware)
 

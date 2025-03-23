@@ -5,6 +5,9 @@
 #include "pico/multicore.h"
 #include "pico/stdlib.h"
 #include "pico/time.h"
+
+//
+#include "pio_usb.h"
 #include "tusb.h"
 #include "uni.h"
 
@@ -46,6 +49,10 @@ void core1_main() {
     printf("core1_main\n");
 
     // Initialize USB host stack
+    pio_usb_configuration_t pio_cfg = PIO_USB_DEFAULT_CONFIG;
+    pio_cfg.pin_dp = 6;
+    pio_cfg.pinout = PIO_USB_PINOUT_DPDM;
+    tuh_configure(1, TUH_CFGID_RPI_PIO_USB_CONFIGURATION, &pio_cfg);
     tuh_init(BOARD_TUH_RHPORT);
 
     while (1) {

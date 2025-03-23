@@ -4,3 +4,6 @@
 [submodule "external/bluepad32"]
 	path = external/bluepad32
 	url = https://github.com/ricardoquesada/bluepad32
+[submodule "external/Pico-PIO-USB"]
+	path = external/Pico-PIO-USB
+	url = https://github.com/sekigon-gonnoc/Pico-PIO-USB/
