@@ -23,6 +23,11 @@ if (EXISTS ${picoVscode})
     include(${picoVscode})
 endif()
 # ====================================================================================
+
+set(SRC ${CMAKE_CURRENT_LIST_DIR}/src)
+set(EXTERNAL_DIR ${CMAKE_CURRENT_LIST_DIR}/external)
+
+set(PICO_TINYUSB_PATH ${EXTERNAL_DIR}/tinyusb)
 set(PICO_BOARD pico_w CACHE STRING "Board type")
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
@@ -35,7 +40,9 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(dock-firmware src/main.cpp)
+add_executable(dock-firmware
+    ${SRC}/main.cpp
+)
 
 pico_set_program_name(dock-firmware "dock-firmware")
 pico_set_program_version(dock-firmware "0.1")
@@ -51,17 +58,18 @@ target_compile_definitions(dock-firmware PRIVATE
 
 # Add the standard library to the build
 target_link_libraries(dock-firmware
-        pico_stdlib)
+    pico_stdlib
+)
 
 # Add the standard include files to the build
 target_include_directories(dock-firmware PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}
+    ${SRC}
 )
 
 # Add any user requested libraries
 target_link_libraries(dock-firmware 
-        
-        )
+    tinyusb_host
+)
 
 pico_add_extra_outputs(dock-firmware)
 
