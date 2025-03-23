@@ -25,6 +25,7 @@ endif()
 # ====================================================================================
 
 set(SRC ${CMAKE_CURRENT_LIST_DIR}/src)
+set(INCLUDE ${CMAKE_CURRENT_LIST_DIR}/include)
 set(EXTERNAL_DIR ${CMAKE_CURRENT_LIST_DIR}/external)
 
 set(PICO_BOARD pico_w CACHE STRING "Board type")
@@ -48,7 +49,8 @@ set(PICO_PIO_USB_PATH ${EXTERNAL_DIR}/Pico-PIO-USB)
 
 add_executable(dock-firmware
     ${SRC}/main.cpp
-    ${SRC}/bluepad32_platform.cpp
+    ${SRC}/bluetooth/bluetooth.cpp
+    ${SRC}/usb_host/usb_host.cpp
     ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/dcd_pio_usb.c
     ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/hcd_pio_usb.c
 )
@@ -73,6 +75,8 @@ target_compile_definitions(dock-firmware PRIVATE
   PLL_SYS_VCO_FREQ_HZ=1536000000
   PLL_SYS_POSTDIV1=4
   PLL_SYS_POSTDIV2=2
+
+  PIN_USB_DP=6
 )
 
 # Add the standard library to the build
@@ -82,12 +86,12 @@ target_link_libraries(dock-firmware
 
 # Add the standard include files to the build
 target_include_directories(dock-firmware PRIVATE
-    ${SRC}
+    ${INCLUDE}
 )
 
 # Needed for btstack_config.h / sdkconfig.h
 # so that libbluepad32 can include them
-include_directories(dock-firmware ${SRC})
+include_directories(dock-firmware ${INCLUDE})
 
 # Add any user requested libraries
 target_link_libraries(dock-firmware
