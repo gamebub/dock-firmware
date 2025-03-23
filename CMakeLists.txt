@@ -67,7 +67,8 @@ target_include_directories(dock-firmware PRIVATE
 )
 
 # Add any user requested libraries
-target_link_libraries(dock-firmware 
+target_link_libraries(dock-firmware
+    pico_multicore
     tinyusb_host
 )
 

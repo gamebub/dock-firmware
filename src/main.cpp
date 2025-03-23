@@ -1,24 +1,38 @@
 #include <stdio.h>
 
 #include "hardware/clocks.h"
+#include "pico/multicore.h"
 #include "pico/stdlib.h"
 #include "pico/time.h"
 #include "tusb.h"
 
 void cdc_app_task(void);
 
+void core1_main(void);
+
 int main() {
     set_sys_clock_khz(192000, true);
     stdio_init_all();
+    sleep_ms(10);
 
     printf("Dock firmware\n");
+    multicore_reset_core1();
+    multicore_launch_core1(core1_main);
+
+    while (1) {
+        sleep_ms(1000);
+    }
+}
+
+void core1_main() {
+    sleep_ms(10);
+    printf("core1_main\n");
 
     // Initialize USB host stack
     tuh_init(BOARD_TUH_RHPORT);
 
     while (1) {
         tuh_task();
-
         cdc_app_task();
     }
 }
