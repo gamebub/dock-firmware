@@ -50,6 +50,7 @@ set(PICO_PIO_USB_PATH ${EXTERNAL_DIR}/Pico-PIO-USB)
 add_executable(dock-firmware
     ${SRC}/main.cpp
     ${SRC}/bluetooth/bluetooth.cpp
+    ${SRC}/handheld/handheld.cpp
     ${SRC}/usb_host/usb_host.cpp
     ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/dcd_pio_usb.c
     ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/hcd_pio_usb.c

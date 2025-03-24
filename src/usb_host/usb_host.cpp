@@ -2,12 +2,14 @@
 
 #include <cstdint>
 
+#include "handheld/handheld.h"
+#include "host/hcd.h"
 #include "pio_usb.h"
 #include "tusb.h"
 
 void cdc_app_task(void);
 
-namespace {}
+namespace {}  // namespace
 
 void StartUsbHost() {
     // Initialize USB host stack
@@ -69,11 +71,41 @@ void tuh_cdc_rx_cb(uint8_t idx) {
     printf("%s", (char*)buf);
 }
 
+/// Return the port that the device is plugged into, or 0 if not plugged into the root hub.
+static uint8_t GetDeviceHubPort(uint8_t device_address) {
+    hcd_devtree_info_t devtree_info{};
+    hcd_devtree_get_info(device_address, &devtree_info);
+    uint8_t port = devtree_info.hub_port;
+
+    // Now, see if the hub that the device is part of is itself part of the root hub.
+    hcd_devtree_get_info(devtree_info.hub_addr, &devtree_info);
+    if (devtree_info.hub_addr != 0) {
+        return 0;
+    }
+    return port;
+}
+
 void tuh_cdc_mount_cb(uint8_t idx) {
     tuh_itf_info_t itf_info{};
     tuh_cdc_itf_get_info(idx, &itf_info);
 
     printf("USB CDC mounted: address=%u itf_num=%u\n", itf_info.daddr, itf_info.desc.bInterfaceNumber);
+
+    // Determine whether this is a handheld
+    if (GetDeviceHubPort(itf_info.daddr) != Handheld::kHubPort) {
+        // Not plugged into the main port.
+        return;
+    }
+    uint16_t vid = 0;
+    uint16_t pid = 0;
+    if (!tuh_vid_pid_get(itf_info.daddr, &vid, &pid)) {
+        return;
+    }
+    if (!Handheld::CheckUsbId(vid, pid)) {
+        return;
+    }
+    printf("Detected handheld\n");
+    // TODO:
 }
 
 void tuh_cdc_umount_cb(uint8_t idx) {
