@@ -2,16 +2,21 @@
 
 #include <cstdint>
 
+#include "FreeRTOS.h"
 #include "handheld/handheld.h"
 #include "host/hcd.h"
 #include "pio_usb.h"
+#include "priorities.h"
+#include "task.h"
 #include "tusb.h"
 
 void cdc_app_task(void);
 
-namespace {}  // namespace
+namespace {
+constexpr size_t kStackSize = 8 * 1024;
+}  // namespace
 
-void StartUsbHost() {
+void usb_host_task(void*) {
     // Initialize USB host stack
     pio_usb_configuration_t pio_cfg = PIO_USB_DEFAULT_CONFIG;
     pio_cfg.pin_dp = PIN_USB_DP;
@@ -23,6 +28,14 @@ void StartUsbHost() {
         tuh_task();
         cdc_app_task();
     }
+}
+
+void InitUsbHost() {
+    // Create USB task, pin it to core 1.
+    TaskHandle_t task_handle;
+    xTaskCreate(usb_host_task, "usbh", kStackSize, NULL, static_cast<UBaseType_t>(TaskPriority::kUsbHost),
+                &task_handle);
+    vTaskCoreAffinitySet(task_handle, 1 << 1);
 }
 
 void tuh_mount_cb(uint8_t dev_addr) {

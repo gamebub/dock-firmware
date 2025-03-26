@@ -2,8 +2,8 @@
 
 cmake_minimum_required(VERSION 3.13)
 
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_C_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Initialise pico_sdk from installed location
@@ -34,8 +34,6 @@ set(PICO_BOARD pico_w CACHE STRING "Board type")
 include(pico_sdk_import.cmake)
 
 project(dock-firmware C CXX ASM)
-set(CMAKE_C_STANDARD 17)
-set(CMAKE_CXX_STANDARD 20)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
@@ -44,6 +42,9 @@ set(PICO_TINYUSB_PATH ${EXTERNAL_DIR}/tinyusb)
 set(BTSTACK_ROOT ${PICO_SDK_PATH}/lib/btstack)
 set(BLUEPAD32_ROOT ${EXTERNAL_DIR}/bluepad32)
 set(PICO_PIO_USB_PATH ${EXTERNAL_DIR}/Pico-PIO-USB)
+set(FREERTOS_KERNEL_PATH ${EXTERNAL_DIR}/FreeRTOS-Kernel)
+
+include(FreeRTOS_Kernel_import.cmake)
 
 # Add executable. Default name is the project name, version 0.1
 
@@ -67,9 +68,10 @@ target_compile_definitions(dock-firmware PRIVATE
   PICO_DEFAULT_UART_TX_PIN=8
   PICO_DEFAULT_UART_RX_PIN=9
 
-  PICO_USE_STACK_GUARDS=1
-  PICO_STACK_SIZE=0x2000
-  PICO_CORE1_STACK_SIZE=0
+#   PICO_FLASH_ASSUME_CORE0_SAFE=1
+  PICO_CYW43_ARCH_FREERTOS=1
+  CYW43_LWIP=0
+  CYW43_TASK_STACK_SIZE=2048  # Larger stack, because this calls into btstack/bluepad
 
   # Set system clock to 192 MHz
   SYS_CLK_HZ=192000000
@@ -99,11 +101,12 @@ target_link_libraries(dock-firmware
     pico_multicore
     tinyusb_host
     pico_stdlib
-    pico_cyw43_arch_none
+    pico_cyw43_arch_sys_freertos
     pico_btstack_classic
     pico_btstack_cyw43
     bluepad32
     pico_pio_usb
+    FreeRTOS-Kernel
 )
 
 add_subdirectory(${BLUEPAD32_ROOT}/src/components/bluepad32 libbluepad32)

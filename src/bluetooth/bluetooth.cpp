@@ -1,6 +1,14 @@
 #include "bluetooth/bluetooth.h"
 
+#include "FreeRTOS.h"
+#include "pico/cyw43_arch.h"
+#include "priorities.h"
+#include "task.h"
 #include "uni.h"
+
+namespace {
+constexpr size_t kStackSize = 16 * 1024;
+}
 
 static void platform_init(int argc, const char** argv) {
     ARG_UNUSED(argc);
@@ -112,7 +120,12 @@ static void platform_on_oob_event(uni_platform_oob_event_t event, void* data) {
     }
 }
 
-void StartBluetooth() {
+void bluetooth_task(void*) {
+    if (cyw43_arch_init()) {
+        printf("Failed to initialize CYW43\n");
+        return;
+    }
+
     static struct uni_platform platform{
         .name = "Game Bub Dock",
         .init = platform_init,
@@ -132,4 +145,12 @@ void StartBluetooth() {
     uni_platform_set_custom(&platform);
     uni_init(0, NULL);
     btstack_run_loop_execute();
+}
+
+void InitBluetooth() {
+    // Create USB task, pin it to core 0.
+    TaskHandle_t task_handle;
+    xTaskCreate(bluetooth_task, "bt", kStackSize, NULL, static_cast<UBaseType_t>(TaskPriority::kBluetooth),
+                &task_handle);
+    vTaskCoreAffinitySet(task_handle, 1 << 0);
 }
