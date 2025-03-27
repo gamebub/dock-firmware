@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <optional>
+#include <vector>
 
 #include "FreeRTOS.h"
 #include "core/core.h"
@@ -17,8 +18,18 @@ void cdc_app_task(void);
 
 namespace {
 constexpr size_t kStackSize = 8 * 1024;
+constexpr size_t kRxBufferMaxLen = 64;
 
-static std::optional<uint8_t> handheld_device_address{};
+/// USB state for a handheld device
+struct HandheldDeviceState {
+    uint8_t address;
+    uint8_t cdc_index;
+
+    uint8_t rx_buffer[kRxBufferMaxLen];
+    size_t rx_buffer_len = 0;
+};
+
+static std::optional<HandheldDeviceState> handheld_device{};
 }  // namespace
 
 void usb_host_task(void*) {
@@ -79,14 +90,33 @@ void cdc_app_task(void) {
 }
 
 void tuh_cdc_rx_cb(uint8_t idx) {
-    uint8_t buf[64 + 1];
-    uint32_t const bufsize = sizeof(buf) - 1;
+    // Ignore non-handheld data.
+    if (!handheld_device.has_value() || handheld_device->cdc_index != idx) {
+        return;
+    }
+    auto& state = *handheld_device;
 
-    // forward cdc interfaces -> console
-    uint32_t count = tuh_cdc_read(idx, buf, bufsize);
-    buf[count] = 0;
+    while (tuh_cdc_read_available(idx) > 0) {
+        uint8_t data;
+        tuh_cdc_read(idx, &data, 1);
 
-    printf("%s", (char*)buf);
+        // End of line, pass it to event loop.
+        if (data == '\n') {
+            Event event{};
+            event.type = EventType::kHandheldRxData;
+            event.handheld_rx_data.len = state.rx_buffer_len;
+            memcpy(event.handheld_rx_data.data, state.rx_buffer, state.rx_buffer_len);
+            PostEvent(event);
+
+            state.rx_buffer_len = 0;
+            continue;
+        }
+
+        if (state.rx_buffer_len < kRxBufferMaxLen) {
+            state.rx_buffer[state.rx_buffer_len] = data;
+            state.rx_buffer_len++;
+        }
+    }
 }
 
 /// Return the port that the device is plugged into, or 0 if not plugged into the root hub.
@@ -123,7 +153,9 @@ void tuh_cdc_mount_cb(uint8_t idx) {
         return;
     }
 
-    handheld_device_address = itf_info.daddr;
+    handheld_device.emplace();
+    handheld_device->address = itf_info.daddr;
+    handheld_device->cdc_index = idx;
 
     Event event{};
     event.type = EventType::kHandheldMount;
@@ -135,8 +167,8 @@ void tuh_cdc_umount_cb(uint8_t idx) {
     tuh_cdc_itf_get_info(idx, &itf_info);
     printf("USB CDC unmounted: address=%u, itf_num=%u\n", itf_info.daddr, itf_info.desc.bInterfaceNumber);
 
-    if (handheld_device_address.has_value() == itf_info.daddr) {
-        handheld_device_address.reset();
+    if (handheld_device.has_value() && handheld_device->address == itf_info.daddr) {
+        handheld_device.reset();
 
         Event event{};
         event.type = EventType::kHandheldUnmount;
