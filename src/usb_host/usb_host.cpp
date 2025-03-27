@@ -1,8 +1,10 @@
 #include "usb_host/usb_host.h"
 
 #include <cstdint>
+#include <optional>
 
 #include "FreeRTOS.h"
+#include "core/core.h"
 #include "handheld/handheld.h"
 #include "host/hcd.h"
 #include "pico/time.h"
@@ -15,6 +17,8 @@ void cdc_app_task(void);
 
 namespace {
 constexpr size_t kStackSize = 8 * 1024;
+
+static std::optional<uint8_t> handheld_device_address{};
 }  // namespace
 
 void usb_host_task(void*) {
@@ -118,12 +122,24 @@ void tuh_cdc_mount_cb(uint8_t idx) {
     if (!Handheld::CheckUsbId(vid, pid)) {
         return;
     }
-    printf("Detected handheld\n");
-    // TODO:
+
+    handheld_device_address = itf_info.daddr;
+
+    Event event{};
+    event.type = EventType::kHandheldMount;
+    PostEvent(event);
 }
 
 void tuh_cdc_umount_cb(uint8_t idx) {
     tuh_itf_info_t itf_info{};
     tuh_cdc_itf_get_info(idx, &itf_info);
     printf("USB CDC unmounted: address=%u, itf_num=%u\n", itf_info.daddr, itf_info.desc.bInterfaceNumber);
+
+    if (handheld_device_address.has_value() == itf_info.daddr) {
+        handheld_device_address.reset();
+
+        Event event{};
+        event.type = EventType::kHandheldUnmount;
+        PostEvent(event);
+    }
 }

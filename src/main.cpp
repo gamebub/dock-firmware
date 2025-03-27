@@ -7,6 +7,7 @@
 
 //
 #include "bluetooth/bluetooth.h"
+#include "core/core.h"
 #include "usb_host/usb_host.h"
 
 int main() {
@@ -14,6 +15,7 @@ int main() {
 
     printf("Dock firmware\n");
 
+    InitCore();
     InitUsbHost();
     InitBluetooth();
 

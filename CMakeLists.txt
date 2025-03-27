@@ -53,6 +53,7 @@ include(FreeRTOS_Kernel_import.cmake)
 add_executable(dock-firmware
     ${SRC}/main.cpp
     ${SRC}/bluetooth/bluetooth.cpp
+    ${SRC}/core/core.cpp
     ${SRC}/handheld/handheld.cpp
     ${SRC}/usb_host/usb_host.cpp
     ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/dcd_pio_usb.c
