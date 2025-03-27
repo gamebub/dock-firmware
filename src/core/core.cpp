@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <string_view>
 
 #include "FreeRTOS.h"
 #include "priorities.h"
@@ -9,28 +10,85 @@
 #include "task.h"
 #include "usb_host/usb_host.h"
 
+#define log_info(message, ...) printf("[INF] " message "\n", ##__VA_ARGS__)
+#define log_warn(message, ...) printf("[WRN] " message "\n", ##__VA_ARGS__)
+#define log_error(message, ...) printf("[ERR] " message "\n", ##__VA_ARGS__)
+
 namespace {
+
+enum class State {
+    /// Handheld is not connected
+    Idle,
+    /// Sent info request, waiting for response.
+    WaitForHwInfo,
+    /// Send dock begin, waiting for response.
+    WaitForDockBegin,
+    /// Docking is active.
+    Active,
+    /// Handheld is in an error state
+    Error,
+};
+
 constexpr size_t kStackSize = 8 * 1024;
 constexpr uint32_t kEventQueueLength = 32;
 
 QueueHandle_t event_queue = nullptr;
+State state = State::Idle;
+
+void HandleHandheldResponse(const std::string_view response) {
+    switch (state) {
+        case State::WaitForHwInfo: {
+            if (response.starts_with("ok")) {
+                log_info("Got hw_info: %.*s", response.size(), response.data());
+                char command[] = ">dock_begin\n";
+                UsbWriteHandheldData((uint8_t*)command, sizeof(command) - 1);
+                state = State::WaitForDockBegin;
+            } else {
+                log_error("hw_info error");
+                state = State::Error;
+            }
+            break;
+        }
+        case State::WaitForDockBegin: {
+            if (response.starts_with("ok")) {
+                log_info("Dock begin success");
+                state = State::Active;
+            } else {
+                log_error("Dock begin error");
+                state = State::Error;
+            }
+            break;
+        }
+        default:
+            break;
+    }
+}
 
 void HandleEvent(const Event& event) {
     switch (event.type) {
         case EventType::kHandheldMount: {
-            printf("** Handheld mount\n");
+            if (state != State::Idle) {
+                log_error("Unexpected handheld mount");
+                break;
+            }
 
-            char data[] = "\n>get_hwinfo\n";
-            UsbWriteHandheldData((uint8_t*)data, sizeof(data));
+            log_info("Handheld mount");
+            char command[] = "\n>get_hwinfo\n";
+            UsbWriteHandheldData((uint8_t*)command, sizeof(command) - 1);
+            state = State::WaitForHwInfo;
             break;
         }
+
         case EventType::kHandheldUnmount:
-            printf("** Handheld unmount\n");
+            log_info("Handheld unmount");
+            state = State::Idle;
             break;
+
         case EventType::kHandheldRxData: {
-            printf("response: %.*s\n", event.handheld_rx_data.len, event.handheld_rx_data.data);
+            HandleHandheldResponse(std::string_view((char*)&event.handheld_rx_data.data, event.handheld_rx_data.len));
             break;
         }
+
         default:
             break;
     }
@@ -59,6 +117,6 @@ void PostEvent(const Event& event) {
     auto result = xQueueSendToBack(event_queue, &event,
                                    /* xTicksToWait= */ 0);
     if (result != pdPASS) {
-        printf("Failed to post event\n");
+        log_error("Failed to post event");
     }
 }

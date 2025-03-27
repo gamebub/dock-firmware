@@ -17,6 +17,7 @@
     "cmake.generator": "Ninja",
     "cmake.cmakePath": "${userHome}/.pico-sdk/cmake/v3.31.5/bin/cmake",
     "C_Cpp.debugShortcut": false,
+    "C_Cpp.autoAddFileAssociations": false,
     "terminal.integrated.env.windows": {
         "PICO_SDK_PATH": "${env:USERPROFILE}/.pico-sdk/sdk/2.1.1",
         "PICO_TOOLCHAIN_PATH": "${env:USERPROFILE}/.pico-sdk/toolchain/14_2_Rel1",
@@ -36,13 +37,4 @@
     "raspberry-pi-pico.useCmakeTools": false,
     "raspberry-pi-pico.cmakePath": "${HOME}/.pico-sdk/cmake/v3.31.5/bin/cmake",
     "raspberry-pi-pico.ninjaPath": "${HOME}/.pico-sdk/ninja/v1.12.1/ninja",
-    "files.associations": {
-        "cstdint": "c",
-        "random": "cpp",
-        "async_context_threadsafe_background.h": "c",
-        "btstack_cyw43.h": "c",
-        "optional": "cpp",
-        "algorithm": "cpp",
-        "format": "cpp"
-    }
 }
