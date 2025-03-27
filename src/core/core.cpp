@@ -28,7 +28,7 @@ void HandleEvent(const Event& event) {
             printf("** Handheld unmount\n");
             break;
         case EventType::kHandheldRxData: {
-            printf("** line: %.*s\n", event.handheld_rx_data.len, event.handheld_rx_data.data);
+            printf("response: %.*s\n", event.handheld_rx_data.len, event.handheld_rx_data.data);
             break;
         }
         default:

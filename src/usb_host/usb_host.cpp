@@ -96,13 +96,18 @@ void tuh_cdc_rx_cb(uint8_t idx) {
         tuh_cdc_read(idx, &data, 1);
 
         // End of line, pass it to event loop.
-        if (data == '\n') {
-            Event event{};
-            event.type = EventType::kHandheldRxData;
-            event.handheld_rx_data.len = state.rx_buffer_len;
-            memcpy(event.handheld_rx_data.data, state.rx_buffer, state.rx_buffer_len);
-            PostEvent(event);
-
+        if (data == '\n' && state.rx_buffer_len > 0) {
+            if (state.rx_buffer[0] == '<') {
+                // Send just the command response.
+                Event event{};
+                event.type = EventType::kHandheldRxData;
+                event.handheld_rx_data.len = state.rx_buffer_len - 1;
+                memcpy(event.handheld_rx_data.data, state.rx_buffer + 1, state.rx_buffer_len - 1);
+                PostEvent(event);
+            } else {
+                // Not a command response (log?), print it.
+                printf("| %.*s\n", state.rx_buffer_len, state.rx_buffer);
+            }
             state.rx_buffer_len = 0;
             continue;
         }
