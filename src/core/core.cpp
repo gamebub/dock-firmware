@@ -7,6 +7,7 @@
 #include "priorities.h"
 #include "queue.h"
 #include "task.h"
+#include "usb_host/usb_host.h"
 
 namespace {
 constexpr size_t kStackSize = 8 * 1024;
@@ -16,9 +17,13 @@ QueueHandle_t event_queue = nullptr;
 
 void HandleEvent(const Event& event) {
     switch (event.type) {
-        case EventType::kHandheldMount:
+        case EventType::kHandheldMount: {
             printf("** Handheld mount\n");
+
+            char data[] = "\n>get_hwinfo\n";
+            UsbWriteHandheldData((uint8_t*)data, sizeof(data));
             break;
+        }
         case EventType::kHandheldUnmount:
             printf("** Handheld unmount\n");
             break;

@@ -11,14 +11,14 @@
 #include "pico/time.h"
 #include "pio_usb.h"
 #include "priorities.h"
+#include "stream_buffer.h"
 #include "task.h"
 #include "tusb.h"
-
-void cdc_app_task(void);
 
 namespace {
 constexpr size_t kStackSize = 8 * 1024;
 constexpr size_t kRxBufferMaxLen = 64;
+constexpr size_t kTxBufferLen = 1024;
 
 /// USB state for a handheld device
 struct HandheldDeviceState {
@@ -30,6 +30,8 @@ struct HandheldDeviceState {
 };
 
 static std::optional<HandheldDeviceState> handheld_device{};
+
+StreamBufferHandle_t tx_buffer;
 }  // namespace
 
 void usb_host_task(void*) {
@@ -41,8 +43,19 @@ void usb_host_task(void*) {
     tuh_init(BOARD_TUH_RHPORT);
 
     while (1) {
-        tuh_task();
-        cdc_app_task();
+        // TODO: figure out the best way to interleave device acceses and tuh_task without busy-looping.
+        tuh_task_ext(5, false);
+
+        // Send data to CDC
+        while (!xStreamBufferIsEmpty(tx_buffer)) {
+            uint8_t buf[64];
+            size_t len = xStreamBufferReceive(tx_buffer, buf, sizeof(buf), 0);
+            if (handheld_device.has_value()) {
+                uint8_t idx = handheld_device->cdc_index;
+                tuh_cdc_write(idx, buf, len);
+                tuh_cdc_write_flush(idx);
+            }
+        }
     }
 }
 
@@ -52,6 +65,12 @@ void InitUsbHost() {
     xTaskCreate(usb_host_task, "usbh", kStackSize, NULL, static_cast<UBaseType_t>(TaskPriority::kUsbHost),
                 &task_handle);
     vTaskCoreAffinitySet(task_handle, 1 << 1);
+
+    tx_buffer = xStreamBufferCreate(kTxBufferLen, 0);
+}
+
+void UsbWriteHandheldData(uint8_t* data, size_t len) {
+    xStreamBufferSend(tx_buffer, data, len, portMAX_DELAY);
 }
 
 void tuh_mount_cb(uint8_t dev_addr) {
@@ -63,30 +82,6 @@ void tuh_mount_cb(uint8_t dev_addr) {
 
 void tuh_umount_cb(uint8_t dev_addr) {
     printf("Unmounted USB device address=%d\n", dev_addr);
-}
-
-void cdc_app_task(void) {
-    uint8_t buf[64 + 1];
-    memset(buf, 0, sizeof(buf));
-    uint32_t count = 0;
-
-    // Ping every 3000ms.
-    static uint32_t next_time = 0;
-    uint32_t current_time = to_ms_since_boot(get_absolute_time());
-    if (current_time >= next_time) {
-        count = snprintf((char*)buf, sizeof(buf), "\n>get_hwinfo\n");
-        next_time += 3000;
-    }
-
-    // loop over all mounted interfaces
-    for (uint8_t idx = 0; idx < CFG_TUH_CDC; idx++) {
-        if (tuh_cdc_mounted(idx)) {
-            if (count) {
-                tuh_cdc_write(idx, buf, count);
-                tuh_cdc_write_flush(idx);
-            }
-        }
-    }
 }
 
 void tuh_cdc_rx_cb(uint8_t idx) {
