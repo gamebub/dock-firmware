@@ -40,6 +40,7 @@
         "cstdint": "c",
         "random": "cpp",
         "async_context_threadsafe_background.h": "c",
-        "btstack_cyw43.h": "c"
+        "btstack_cyw43.h": "c",
+        "tusb_private.h": "c"
     }
 }

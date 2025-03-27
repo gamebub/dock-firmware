@@ -28,7 +28,15 @@ set(SRC ${CMAKE_CURRENT_LIST_DIR}/src)
 set(INCLUDE ${CMAKE_CURRENT_LIST_DIR}/include)
 set(EXTERNAL_DIR ${CMAKE_CURRENT_LIST_DIR}/external)
 
+set(PICO_TINYUSB_PATH ${EXTERNAL_DIR}/tinyusb)
+set(BTSTACK_ROOT ${PICO_SDK_PATH}/lib/btstack)
+set(BLUEPAD32_ROOT ${EXTERNAL_DIR}/bluepad32)
+set(PICO_PIO_USB_PATH ${EXTERNAL_DIR}/Pico-PIO-USB)
+set(FREERTOS_KERNEL_PATH ${EXTERNAL_DIR}/FreeRTOS-Kernel)
+
 set(PICO_BOARD pico_w CACHE STRING "Board type")
+set(TINYUSB_OPT_OS OPT_OS_FREERTOS)
+set(TINYUSB_DEBUG_LEVEL 1)
 
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
@@ -37,12 +45,6 @@ project(dock-firmware C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
-
-set(PICO_TINYUSB_PATH ${EXTERNAL_DIR}/tinyusb)
-set(BTSTACK_ROOT ${PICO_SDK_PATH}/lib/btstack)
-set(BLUEPAD32_ROOT ${EXTERNAL_DIR}/bluepad32)
-set(PICO_PIO_USB_PATH ${EXTERNAL_DIR}/Pico-PIO-USB)
-set(FREERTOS_KERNEL_PATH ${EXTERNAL_DIR}/FreeRTOS-Kernel)
 
 include(FreeRTOS_Kernel_import.cmake)
 

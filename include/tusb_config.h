@@ -39,14 +39,6 @@
 #error CFG_TUSB_MCU must be defined
 #endif
 
-#ifndef CFG_TUSB_OS
-#define CFG_TUSB_OS           OPT_OS_FREERTOS
-#endif
-
-#ifndef CFG_TUSB_DEBUG
-#define CFG_TUSB_DEBUG        0
-#endif
-
 /* USB DMA on some MCUs can only access a specific SRAM region with restriction on alignment.
  * Tinyusb use follows macros to declare transferring memory so that they can be put
  * into those specific section.

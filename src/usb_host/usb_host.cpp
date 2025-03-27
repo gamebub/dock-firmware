@@ -5,6 +5,7 @@
 #include "FreeRTOS.h"
 #include "handheld/handheld.h"
 #include "host/hcd.h"
+#include "pico/time.h"
 #include "pio_usb.h"
 #include "priorities.h"
 #include "task.h"
