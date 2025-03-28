@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "controller/uni_gamepad.h"
+
 enum class EventType : uint32_t {
     /// A handheld device (maybe) mounted.
     kHandheldMount,
@@ -10,6 +12,13 @@ enum class EventType : uint32_t {
     kHandheldUnmount,
     /// Handheld RX data.
     kHandheldRxData,
+
+    /// A gamepad has connected.
+    kGamepadConnected,
+    /// A gamepad has disconnected.
+    kGamepadDisconnected,
+    /// New gamepad data.
+    kGamepadData,
 };
 
 struct Event {
@@ -20,6 +29,10 @@ struct Event {
             size_t len;
             uint8_t data[64];
         } handheld_rx_data;
+
+        struct {
+            uni_gamepad_t data;
+        } gamepad_data;
     };
 };
 

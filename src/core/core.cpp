@@ -29,6 +29,18 @@ enum class State {
     Error,
 };
 
+struct GamepadData {
+    // From bit 0:
+    // (A B X Y) (Up Down Right Left) (System Select Start Capture(?)) (L1 R1 L2 R2 L3 R3)
+    uint32_t buttons;
+    int16_t lx;
+    int16_t ly;
+    int16_t lz;
+    int16_t rx;
+    int16_t ry;
+    int16_t rz;
+};
+
 constexpr size_t kStackSize = 8 * 1024;
 constexpr uint32_t kEventQueueLength = 32;
 
@@ -86,6 +98,54 @@ void HandleEvent(const Event& event) {
 
         case EventType::kHandheldRxData: {
             HandleHandheldResponse(std::string_view((char*)&event.handheld_rx_data.data, event.handheld_rx_data.len));
+            break;
+        }
+
+        case EventType::kGamepadConnected: {
+            // TODO: gamepad slot and other info
+            log_info("Gamepad connected");
+            char buffer[64];
+            int len = sprintf(buffer, ">gamepad_connect,%d\n", 0);
+            UsbWriteHandheldData((uint8_t*)buffer, len);
+            break;
+        }
+
+        case EventType::kGamepadDisconnected: {
+            // TODO: gamepad slot
+            log_info("Gamepad disconnected");
+            char buffer[64];
+            int len = sprintf(buffer, ">gamepad_disconnect,%d\n", 0);
+            UsbWriteHandheldData((uint8_t*)buffer, len);
+            break;
+        }
+
+        case EventType::kGamepadData: {
+            auto& data = event.gamepad_data.data;
+            // buttons: 32 bits: (A B X Y) (Up Down Right Left) (System Select Start Capture(?)) (L1 R1 L2 R2 L3 R3)
+            GamepadData gp;
+            gp.buttons = ((data.buttons & 0b1111) << 0) | ((data.dpad & 0b1111) << 4) |
+                         ((data.misc_buttons & 0b1111) << 8) | (((data.buttons & 0b1111110000) >> 4) << 12);
+            gp.lx = (int16_t)(data.axis_x << 6);
+            gp.ly = (int16_t)(data.axis_y << 6);
+            gp.lz = (int16_t)(data.brake << 5);
+            gp.rx = (int16_t)(data.axis_rx << 6);
+            gp.ry = (int16_t)(data.axis_ry << 6);
+            gp.rz = (int16_t)(data.throttle << 5);
+            // log_info("Gamepad: [%05lX] (%6d %6d) (%6d %6d) (%6d %6d)", gp.buttons, gp.lx, gp.ly, gp.lz, gp.rx, gp.ry,
+            //          gp.rz);
+            if (state == State::Active) {
+                // Requires little endian
+                char buffer[64];
+                char* x = buffer;
+
+                x += sprintf(x, ">gamepad_data,%d,", 0);
+                for (size_t i = 0; i < sizeof(gp); i++) {
+                    x += sprintf(x, "%02x", ((uint8_t*)(&gp))[i]);
+                }
+                x += sprintf(x, "\n");
+                int len = x - buffer;
+                UsbWriteHandheldData((uint8_t*)buffer, len);
+            }
             break;
         }
 

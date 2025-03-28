@@ -1,6 +1,7 @@
 #include "bluetooth/bluetooth.h"
 
 #include "FreeRTOS.h"
+#include "core/core.h"
 #include "pico/cyw43_arch.h"
 #include "priorities.h"
 #include "task.h"
@@ -35,62 +36,50 @@ static uni_error_t platform_on_device_discovered(bd_addr_t addr, const char* nam
     (void)name;
     (void)device_class;
     (void)rssi;
+
+    // Only accept gamepads.
+    if (((device_class & UNI_BT_COD_MINOR_MASK) & UNI_BT_COD_MINOR_GAMEPAD) != UNI_BT_COD_MINOR_GAMEPAD) {
+        logi("Ignoring non-gamepad\n");
+        return UNI_ERROR_IGNORE_DEVICE;
+    }
+
     // Can ignore connection by returning an error.
     return UNI_ERROR_SUCCESS;
 }
 
 static void platform_on_device_connected(uni_hid_device_t* d) {
-    logi("bluetooth: device connected: %p\n", d);
+    logi("bluetooth: device connected: %p vendor=%x product=%x\n", d, d->vendor_id, d->product_id);
 }
 
 static void platform_on_device_disconnected(uni_hid_device_t* d) {
     logi("bluetooth: device disconnected: %p\n", d);
+
+    Event event;
+    event.type = EventType::kGamepadDisconnected;
+    PostEvent(event);
+    // TODO: identifying info
 }
 
 static uni_error_t platform_on_device_ready(uni_hid_device_t* d) {
     logi("my_platform: device ready: %p\n", d);
+
+    Event event;
+    event.type = EventType::kGamepadConnected;
+    PostEvent(event);
+    // TODO: gamepad identifying information, type, etc.
 
     // Can reject the connection by returning an error.
     return UNI_ERROR_SUCCESS;
 }
 
 static void platform_on_controller_data(uni_hid_device_t* d, uni_controller_t* ctl) {
-    static uint8_t enabled = true;
-
-    // Debug log if the state has changed.
-    static uni_controller_t prev = {};
-    if (memcmp(&prev, ctl, sizeof(*ctl)) != 0) {
-        logi("(%p) id=%d ", d, uni_hid_device_get_idx_for_instance(d));
-        uni_controller_dump(ctl);
-    }
-    prev = *ctl;
-
     if (ctl->klass == UNI_CONTROLLER_CLASS_GAMEPAD) {
         uni_gamepad_t* gp = &ctl->gamepad;
 
-        // Debugging
-        // Axis ry: control rumble
-        if ((gp->buttons & BUTTON_A) && d->report_parser.play_dual_rumble != NULL) {
-            d->report_parser.play_dual_rumble(d, 0 /* delayed start ms */, 250 /* duration ms */,
-                                              128 /* weak magnitude */, 0 /* strong magnitude */);
-        }
-
-        if ((gp->buttons & BUTTON_B) && d->report_parser.play_dual_rumble != NULL) {
-            d->report_parser.play_dual_rumble(d, 0 /* delayed start ms */, 250 /* duration ms */,
-                                              0 /* weak magnitude */, 128 /* strong magnitude */);
-        }
-
-        // Toggle Bluetooth connections
-        if ((gp->buttons & BUTTON_SHOULDER_L) && enabled) {
-            logi("*** Disabling Bluetooth connections\n");
-            uni_bt_stop_scanning_safe();
-            enabled = false;
-        }
-        if ((gp->buttons & BUTTON_SHOULDER_R) && !enabled) {
-            logi("*** Enabling Bluetooth connections\n");
-            uni_bt_start_scanning_and_autoconnect_safe();
-            enabled = true;
-        }
+        Event event;
+        event.type = EventType::kGamepadData;
+        event.gamepad_data.data = *gp;
+        PostEvent(event);
     }
 }
 
