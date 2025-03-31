@@ -91,9 +91,11 @@ void tuh_cdc_rx_cb(uint8_t idx) {
     }
     auto& state = *handheld_device;
 
-    while (tuh_cdc_read_available(idx) > 0) {
-        uint8_t data;
-        tuh_cdc_read(idx, &data, 1);
+    uint8_t buffer[64];
+    uint32_t available = tuh_cdc_read(idx, &buffer, sizeof(buffer));
+
+    for (uint32_t i = 0; i < available; i++) {
+        uint8_t data = buffer[i];
 
         // End of line, pass it to event loop.
         if (data == '\n' && state.rx_buffer_len > 0) {
