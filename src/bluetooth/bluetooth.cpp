@@ -21,6 +21,18 @@ static void platform_init(int argc, const char** argv) {
 static void platform_on_init_complete(void) {
     logi("bluetooth: on_init_complete()\n");
 
+    // Set BLE connection interval (minimum and maximum) to the minimum 7.5ms,
+    // and the connection latency to 0. Other values left at btstack default.
+    gap_set_connection_parameters(
+        /* conn_scan_interval */ 0x0060,
+        /* conn_scan_window */ 0x0030,
+        /* conn_interval_min */ 0x06,
+        /* conn_interval_max */ 0x06,
+        /* conn_latency */ 0,
+        /* supervision_timeout */ 0x0048,
+        /* min_ce_length */ 2,
+        /* max_ce_length */ 0x0030);
+
     // Start scanning and autoconnect to supported controllers.
     uni_bt_start_scanning_and_autoconnect_unsafe();
 
@@ -80,6 +92,16 @@ static void platform_on_controller_data(uni_hid_device_t* d, uni_controller_t* c
         event.type = EventType::kGamepadData;
         event.gamepad_data.data = *gp;
         PostEvent(event);
+
+        static size_t num_events = 0;
+        static TickType_t events_since = 0;
+        TickType_t elapsed = xTaskGetTickCount() - events_since;
+        num_events++;
+        if (elapsed >= 3000) {
+            logi("events per second: %u\n", num_events * 1000 / elapsed);
+            num_events = 0;
+            events_since = xTaskGetTickCount();
+        }
     }
 }
 
