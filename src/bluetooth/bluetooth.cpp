@@ -11,6 +11,15 @@ namespace {
 constexpr size_t kStackSize = 16 * 1024;
 }
 
+struct GamepadInfo {
+    uint32_t id;
+};
+_Static_assert(sizeof(GamepadInfo) <= HID_DEVICE_MAX_PLATFORM_DATA, "GamepadInfo too big");
+
+GamepadInfo* GetGamepadInfo(uni_hid_device_t* d) {
+    return (GamepadInfo*)d->platform_data;
+}
+
 static void platform_init(int argc, const char** argv) {
     ARG_UNUSED(argc);
     ARG_UNUSED(argv);
@@ -68,17 +77,22 @@ static void platform_on_device_disconnected(uni_hid_device_t* d) {
 
     Event event;
     event.type = EventType::kGamepadDisconnected;
+    event.gamepad_disconnected.gamepad_id = GetGamepadInfo(d)->id;
     PostEvent(event);
-    // TODO: identifying info
 }
 
 static uni_error_t platform_on_device_ready(uni_hid_device_t* d) {
     logi("my_platform: device ready: %p\n", d);
 
+    uint32_t gamepad_id = AssignGamepadId();
+    GetGamepadInfo(d)->id = gamepad_id;
+
     Event event;
     event.type = EventType::kGamepadConnected;
+    event.gamepad_connected.gamepad.id = gamepad_id;
+    event.gamepad_connected.gamepad.gamepad_type = d->controller_type;
+    // TODO: more gamepad info
     PostEvent(event);
-    // TODO: gamepad identifying information, type, etc.
 
     // Can reject the connection by returning an error.
     return UNI_ERROR_SUCCESS;
@@ -90,6 +104,7 @@ static void platform_on_controller_data(uni_hid_device_t* d, uni_controller_t* c
 
         Event event;
         event.type = EventType::kGamepadData;
+        event.gamepad_data.gamepad_id = GetGamepadInfo(d)->id;
         event.gamepad_data.data = *gp;
         PostEvent(event);
 

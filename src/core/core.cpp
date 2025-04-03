@@ -5,6 +5,7 @@
 #include <string_view>
 
 #include "FreeRTOS.h"
+#include "pico/mutex.h"
 #include "priorities.h"
 #include "queue.h"
 #include "task.h"
@@ -97,30 +98,32 @@ void HandleEvent(const Event& event) {
             break;
 
         case EventType::kHandheldRxData: {
-            HandleHandheldResponse(std::string_view((char*)&event.handheld_rx_data.data, event.handheld_rx_data.len));
+            const auto& data = event.handheld_rx_data;
+            HandleHandheldResponse(std::string_view((char*)&data.data, data.len));
             break;
         }
 
         case EventType::kGamepadConnected: {
-            // TODO: gamepad slot and other info
-            log_info("Gamepad connected");
+            const auto& data = event.gamepad_connected;
+            log_info("Gamepad connected: id=%u", data.gamepad.id);
             char buffer[64];
-            int len = sprintf(buffer, ">gamepad_connect,%d\n", 0);
+            int len = sprintf(buffer, ">gamepad_connect,%u\n", data.gamepad.id);
             UsbWriteHandheldData((uint8_t*)buffer, len);
+            // TODO pass other info (type, name, etc.)
             break;
         }
 
         case EventType::kGamepadDisconnected: {
-            // TODO: gamepad slot
-            log_info("Gamepad disconnected");
+            const auto& data = event.gamepad_disconnected;
+            log_info("Gamepad disconnected: id=%u", data.gamepad_id);
             char buffer[64];
-            int len = sprintf(buffer, ">gamepad_disconnect,%d\n", 0);
+            int len = sprintf(buffer, ">gamepad_disconnect,%u\n", data.gamepad_id);
             UsbWriteHandheldData((uint8_t*)buffer, len);
             break;
         }
 
         case EventType::kGamepadData: {
-            auto& data = event.gamepad_data.data;
+            const auto& data = event.gamepad_data.data;
             // buttons: 32 bits: (A B X Y) (Up Down Right Left) (System Select Start Capture(?)) (L1 R1 L2 R2 L3 R3)
             GamepadData gp;
             gp.buttons = ((data.buttons & 0b1111) << 0) | ((data.dpad & 0b1111) << 4) |
@@ -179,4 +182,14 @@ void PostEvent(const Event& event) {
     if (result != pdPASS) {
         log_error("Failed to post event");
     }
+}
+
+auto_init_mutex(gamepad_id_mutex);
+
+uint32_t AssignGamepadId() {
+    static uint32_t next_gamepad_id = 1;
+    mutex_enter_blocking(&gamepad_id_mutex);
+    uint32_t id = next_gamepad_id++;
+    mutex_exit(&gamepad_id_mutex);
+    return id;
 }
