@@ -1,8 +1,10 @@
 #include "core/core.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdio>
 #include <string_view>
+#include <vector>
 
 #include "FreeRTOS.h"
 #include "pico/mutex.h"
@@ -47,6 +49,14 @@ constexpr uint32_t kEventQueueLength = 32;
 
 QueueHandle_t event_queue = nullptr;
 State state = State::Idle;
+std::vector<Gamepad> gamepads;
+
+void WriteGamepadConnected(const Gamepad& gamepad) {
+    char buffer[64];
+    int len = sprintf(buffer, ">gamepad_connect,%lu\n", gamepad.id);
+    UsbWriteHandheldData((uint8_t*)buffer, len);
+    // TODO pass other info (type, name, etc.)
+}
 
 void HandleHandheldResponse(const std::string_view response) {
     switch (state) {
@@ -65,6 +75,10 @@ void HandleHandheldResponse(const std::string_view response) {
         case State::WaitForDockBegin: {
             if (response.starts_with("ok")) {
                 log_info("Dock begin success");
+                // Send all already-connected gamepads
+                for (const Gamepad& gamepad : gamepads) {
+                    WriteGamepadConnected(gamepad);
+                }
                 state = State::Active;
             } else {
                 log_error("Dock begin error");
@@ -105,20 +119,30 @@ void HandleEvent(const Event& event) {
 
         case EventType::kGamepadConnected: {
             const auto& data = event.gamepad_connected;
-            log_info("Gamepad connected: id=%u", data.gamepad.id);
-            char buffer[64];
-            int len = sprintf(buffer, ">gamepad_connect,%u\n", data.gamepad.id);
-            UsbWriteHandheldData((uint8_t*)buffer, len);
-            // TODO pass other info (type, name, etc.)
+            log_info("Gamepad connected: id=%lu", data.gamepad.id);
+            gamepads.push_back(data.gamepad);
+
+            if (state == State::Active) {
+                WriteGamepadConnected(data.gamepad);
+            }
             break;
         }
 
         case EventType::kGamepadDisconnected: {
             const auto& data = event.gamepad_disconnected;
-            log_info("Gamepad disconnected: id=%u", data.gamepad_id);
-            char buffer[64];
-            int len = sprintf(buffer, ">gamepad_disconnect,%u\n", data.gamepad_id);
-            UsbWriteHandheldData((uint8_t*)buffer, len);
+            log_info("Gamepad disconnected: id=%lu", data.gamepad_id);
+            auto entry_it = std::find_if(gamepads.begin(), gamepads.end(),
+                                         [&](const auto& val) { return val.id == data.gamepad_id; });
+            if (entry_it == gamepads.end()) {
+                break;
+            }
+            gamepads.erase(entry_it);
+
+            if (state == State::Active) {
+                char buffer[64];
+                int len = sprintf(buffer, ">gamepad_disconnect,%lu\n", data.gamepad_id);
+                UsbWriteHandheldData((uint8_t*)buffer, len);
+            }
             break;
         }
 
@@ -141,7 +165,7 @@ void HandleEvent(const Event& event) {
                 char buffer[64];
                 char* x = buffer;
 
-                x += sprintf(x, ">gamepad_data,%d,", 0);
+                x += sprintf(x, ">gamepad_data,%lu,", event.gamepad_data.gamepad_id);
                 for (size_t i = 0; i < sizeof(gp); i++) {
                     x += sprintf(x, "%02x", ((uint8_t*)(&gp))[i]);
                 }
