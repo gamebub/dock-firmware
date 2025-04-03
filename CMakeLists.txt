@@ -67,6 +67,10 @@ pico_set_program_version(dock-firmware "0.1")
 pico_enable_stdio_uart(dock-firmware 1)
 pico_enable_stdio_usb(dock-firmware 0)
 target_compile_definitions(dock-firmware PRIVATE
+  DOCK_SW_VERSION="0.1"
+  DOCK_HW_VERSION="1"
+  DOCK_SERIAL_NUM="0" # TODO
+
   PICO_DEFAULT_UART=1
   PICO_DEFAULT_UART_TX_PIN=8
   PICO_DEFAULT_UART_RX_PIN=9

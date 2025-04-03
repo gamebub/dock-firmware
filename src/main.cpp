@@ -13,7 +13,10 @@
 int main() {
     stdio_init_all();
 
-    printf("Dock firmware\n");
+    printf("Game Bub Dock\n");
+    printf("hardware version: %s\n", DOCK_HW_VERSION);
+    printf("software version: %s\n", DOCK_SW_VERSION);
+    printf("serial number: %s\n", DOCK_SERIAL_NUM);
 
     InitCore();
     InitUsbHost();

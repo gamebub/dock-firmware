@@ -63,8 +63,10 @@ void HandleHandheldResponse(const std::string_view response) {
         case State::WaitForHwInfo: {
             if (response.starts_with("ok")) {
                 log_info("Got hw_info: %.*s", response.size(), response.data());
-                char command[] = ">dock_begin\n";
-                UsbWriteHandheldData((uint8_t*)command, sizeof(command) - 1);
+                char buffer[64];
+                int len = snprintf(buffer, sizeof(buffer), ">dock_begin,%s,%s,%s\n", DOCK_SERIAL_NUM, DOCK_HW_VERSION,
+                                   DOCK_SW_VERSION);
+                UsbWriteHandheldData((uint8_t*)buffer, len);
                 state = State::WaitForDockBegin;
             } else {
                 log_error("hw_info error");
