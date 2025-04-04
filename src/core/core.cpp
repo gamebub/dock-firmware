@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "FreeRTOS.h"
+#include "bluetooth/bluetooth.h"
 #include "led/led.h"
 #include "pico/mutex.h"
 #include "priorities.h"
@@ -51,6 +52,17 @@ constexpr uint32_t kEventQueueLength = 32;
 QueueHandle_t event_queue = nullptr;
 State state = State::Idle;
 std::vector<Gamepad> gamepads;
+bool is_pairing = false;
+
+void UpdateLedBehavior() {
+    if (is_pairing) {
+        SetLedBehavior(LedBehavior::kBlinkFast);
+    } else if (state == State::Active) {
+        SetLedBehavior(LedBehavior::kOn);
+    } else {
+        SetLedBehavior(LedBehavior::kOff);
+    }
+}
 
 void WriteGamepadConnected(const Gamepad& gamepad) {
     char buffer[64];
@@ -84,7 +96,7 @@ void HandleHandheldResponse(const std::string_view response) {
                     WriteGamepadConnected(gamepad);
                 }
                 state = State::Active;
-                SetLedBehavior(LedBehavior::kOn);
+                UpdateLedBehavior();
             } else {
                 log_error("Dock begin error");
                 state = State::Error;
@@ -114,7 +126,7 @@ void HandleEvent(const Event& event) {
         case EventType::kHandheldUnmount:
             log_info("Handheld unmount");
             state = State::Idle;
-            SetLedBehavior(LedBehavior::kOff);
+            UpdateLedBehavior();
             break;
 
         case EventType::kHandheldRxData: {
@@ -131,6 +143,10 @@ void HandleEvent(const Event& event) {
             if (state == State::Active) {
                 WriteGamepadConnected(data.gamepad);
             }
+
+            is_pairing = false;
+            BluetoothEnablePairing(false);
+            UpdateLedBehavior();
             break;
         }
 
@@ -188,7 +204,10 @@ void HandleEvent(const Event& event) {
         }
 
         case EventType::kButtonLongPress: {
-            log_info("Button long press");
+            log_info("Enter pairing mode");
+            is_pairing = true;
+            BluetoothEnablePairing(true);
+            UpdateLedBehavior();
             break;
         }
 
