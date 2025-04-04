@@ -55,6 +55,7 @@ add_executable(dock-firmware
     ${SRC}/bluetooth/bluetooth.cpp
     ${SRC}/core/core.cpp
     ${SRC}/handheld/handheld.cpp
+    ${SRC}/led/led.cpp
     ${SRC}/usb_host/usb_host.cpp
     ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/dcd_pio_usb.c
     ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/hcd_pio_usb.c
@@ -87,6 +88,7 @@ target_compile_definitions(dock-firmware PRIVATE
   PLL_SYS_POSTDIV2=2
 
   PIN_USB_DP=6
+  PIN_LED=13
 )
 
 # Add the standard library to the build
@@ -114,6 +116,7 @@ target_link_libraries(dock-firmware
     bluepad32
     pico_pio_usb
     FreeRTOS-Kernel
+    hardware_pwm
 )
 
 add_subdirectory(${BLUEPAD32_ROOT}/src/components/bluepad32 libbluepad32)

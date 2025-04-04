@@ -8,6 +8,7 @@
 //
 #include "bluetooth/bluetooth.h"
 #include "core/core.h"
+#include "led/led.h"
 #include "usb_host/usb_host.h"
 
 int main() {
@@ -18,9 +19,12 @@ int main() {
     printf("software version: %s\n", DOCK_SW_VERSION);
     printf("serial number: %s\n", DOCK_SERIAL_NUM);
 
+    InitLed();
     InitCore();
     InitUsbHost();
     InitBluetooth();
+
+    SetLedBehavior(LedBehavior::kBreatheSlow);
 
     // Start FreeRTOS (doesn't return).
     vTaskStartScheduler();

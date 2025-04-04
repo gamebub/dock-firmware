@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "FreeRTOS.h"
+#include "led/led.h"
 #include "pico/mutex.h"
 #include "priorities.h"
 #include "queue.h"
@@ -82,6 +83,7 @@ void HandleHandheldResponse(const std::string_view response) {
                     WriteGamepadConnected(gamepad);
                 }
                 state = State::Active;
+                SetLedBehavior(LedBehavior::kOn);
             } else {
                 log_error("Dock begin error");
                 state = State::Error;
@@ -111,6 +113,7 @@ void HandleEvent(const Event& event) {
         case EventType::kHandheldUnmount:
             log_info("Handheld unmount");
             state = State::Idle;
+            SetLedBehavior(LedBehavior::kOff);
             break;
 
         case EventType::kHandheldRxData: {
