@@ -181,6 +181,16 @@ void HandleEvent(const Event& event) {
             break;
         }
 
+        case EventType::kButtonShortPress: {
+            log_info("Button short press");
+            break;
+        }
+
+        case EventType::kButtonLongPress: {
+            log_info("Button long press");
+            break;
+        }
+
         default:
             break;
     }

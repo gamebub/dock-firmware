@@ -8,6 +8,7 @@
 //
 #include "bluetooth/bluetooth.h"
 #include "core/core.h"
+#include "gpio/gpio.h"
 #include "led/led.h"
 #include "usb_host/usb_host.h"
 
@@ -23,6 +24,7 @@ int main() {
     InitCore();
     InitUsbHost();
     InitBluetooth();
+    InitGpio();
 
     SetLedBehavior(LedBehavior::kBreatheSlow);
 

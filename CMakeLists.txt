@@ -55,6 +55,7 @@ add_executable(dock-firmware
     ${SRC}/bluetooth/bluetooth.cpp
     ${SRC}/core/core.cpp
     ${SRC}/handheld/handheld.cpp
+    ${SRC}/gpio/gpio.cpp
     ${SRC}/led/led.cpp
     ${SRC}/usb_host/usb_host.cpp
     ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/dcd_pio_usb.c
@@ -89,6 +90,7 @@ target_compile_definitions(dock-firmware PRIVATE
 
   PIN_USB_DP=6
   PIN_LED=13
+  PIN_BUTTON=3
 )
 
 # Add the standard library to the build

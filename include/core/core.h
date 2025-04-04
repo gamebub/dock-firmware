@@ -25,6 +25,11 @@ enum class EventType : uint32_t {
     kGamepadDisconnected,
     /// New gamepad data.
     kGamepadData,
+
+    /// The dock button was pressed and released.
+    kButtonShortPress,
+    /// The dock button was long pressed.
+    kButtonLongPress,
 };
 
 struct Event {
