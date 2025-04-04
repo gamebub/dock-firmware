@@ -54,9 +54,10 @@ std::vector<Gamepad> gamepads;
 
 void WriteGamepadConnected(const Gamepad& gamepad) {
     char buffer[64];
-    int len = sprintf(buffer, ">gamepad_connect,%lu\n", gamepad.id);
-    UsbWriteHandheldData((uint8_t*)buffer, len);
-    // TODO pass other info (type, name, etc.)
+    // >gamepad_connect,slot,name,unique_id
+    int len = snprintf(buffer, sizeof(buffer), ">gamepad_connect,%lu,%s,%s\n", gamepad.id,
+                       uni_gamepad_get_model_name(gamepad.gamepad_type), gamepad.device_id);
+    UsbWriteHandheldData((uint8_t*)buffer, MIN(len, sizeof(buffer) - 1));
 }
 
 void HandleHandheldResponse(const std::string_view response) {
@@ -67,7 +68,7 @@ void HandleHandheldResponse(const std::string_view response) {
                 char buffer[64];
                 int len = snprintf(buffer, sizeof(buffer), ">dock_begin,%s,%s,%s\n", DOCK_SERIAL_NUM, DOCK_HW_VERSION,
                                    DOCK_SW_VERSION);
-                UsbWriteHandheldData((uint8_t*)buffer, len);
+                UsbWriteHandheldData((uint8_t*)buffer, MIN(len, sizeof(buffer) - 1));
                 state = State::WaitForDockBegin;
             } else {
                 log_error("hw_info error");

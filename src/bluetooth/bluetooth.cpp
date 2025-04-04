@@ -91,6 +91,8 @@ static uni_error_t platform_on_device_ready(uni_hid_device_t* d) {
     event.type = EventType::kGamepadConnected;
     event.gamepad_connected.gamepad.id = gamepad_id;
     event.gamepad_connected.gamepad.gamepad_type = d->controller_type;
+    strncpy(event.gamepad_connected.gamepad.device_id, bd_addr_to_str(d->conn.btaddr),
+            sizeof(event.gamepad_connected.gamepad.device_id));
     // TODO: more gamepad info
     PostEvent(event);
 
