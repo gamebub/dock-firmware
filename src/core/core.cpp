@@ -155,8 +155,8 @@ void HandleEvent(const Event& event) {
 
         case EventType::kGamepadData: {
             const auto& gp = event.gamepad_data.data;
-            // log_info("Gamepad: [%05lX] (%6d %6d) (%6d %6d) (%6d %6d)", gp.buttons, gp.lx, gp.ly, gp.rx, gp.ry, gp.lz,
-            //  gp.rz);
+            // log_info("Gamepad: [%05lX] L(%6d %6d) R(%6d %6d) (Lz=%5u Rz=%5u)", gp.buttons, gp.lx, gp.ly, gp.rx,
+            // gp.ry, gp.lz, gp.rz);
             if (state == State::Active) {
                 // Requires little endian
                 char buffer[64];

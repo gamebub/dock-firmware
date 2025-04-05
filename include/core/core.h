@@ -19,10 +19,10 @@ struct GamepadData {
     uint32_t buttons;
     int16_t lx;
     int16_t ly;
-    int16_t lz;
+    uint16_t lz;
     int16_t rx;
     int16_t ry;
-    int16_t rz;
+    uint16_t rz;
 };
 
 enum class EventType : uint32_t {

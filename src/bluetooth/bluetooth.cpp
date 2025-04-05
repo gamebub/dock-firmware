@@ -113,10 +113,10 @@ static void platform_on_controller_data(uni_hid_device_t* d, uni_controller_t* c
                        (((gp->buttons & 0b1111110000) >> 4) << 12);
         data.lx = (int16_t)(gp->axis_x << 6);
         data.ly = (int16_t)(gp->axis_y << 6);
-        data.lz = (int16_t)(gp->brake << 5);
+        data.lz = (uint16_t)(gp->brake << 6);
         data.rx = (int16_t)(gp->axis_rx << 6);
         data.ry = (int16_t)(gp->axis_ry << 6);
-        data.rz = (int16_t)(gp->throttle << 5);
+        data.rz = (uint16_t)(gp->throttle << 6);
         PostEvent(event);
 
         static size_t num_events = 0;
