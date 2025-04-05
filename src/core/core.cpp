@@ -9,15 +9,12 @@
 #include "FreeRTOS.h"
 #include "bluetooth/bluetooth.h"
 #include "led/led.h"
+#include "log/log.h"
 #include "pico/mutex.h"
 #include "priorities.h"
 #include "queue.h"
 #include "task.h"
 #include "usb_host/usb_host.h"
-
-#define log_info(message, ...) printf("[INF] " message "\n", ##__VA_ARGS__)
-#define log_warn(message, ...) printf("[WRN] " message "\n", ##__VA_ARGS__)
-#define log_error(message, ...) printf("[ERR] " message "\n", ##__VA_ARGS__)
 
 namespace {
 
