@@ -91,6 +91,7 @@ static uni_error_t platform_on_device_ready(uni_hid_device_t* d) {
     event.type = EventType::kGamepadConnected;
     event.gamepad_connected.gamepad.id = gamepad_id;
     event.gamepad_connected.gamepad.gamepad_type = d->controller_type;
+    event.gamepad_connected.gamepad.wired = false;
     strncpy(event.gamepad_connected.gamepad.device_id, bd_addr_to_str(d->conn.btaddr),
             sizeof(event.gamepad_connected.gamepad.device_id));
     // TODO: more gamepad info
@@ -107,7 +108,15 @@ static void platform_on_controller_data(uni_hid_device_t* d, uni_controller_t* c
         Event event;
         event.type = EventType::kGamepadData;
         event.gamepad_data.gamepad_id = GetGamepadInfo(d)->id;
-        event.gamepad_data.data = *gp;
+        GamepadData& data = event.gamepad_data.data;
+        data.buttons = ((gp->buttons & 0b1111) << 0) | ((gp->dpad & 0b1111) << 4) | ((gp->misc_buttons & 0b1111) << 8) |
+                       (((gp->buttons & 0b1111110000) >> 4) << 12);
+        data.lx = (int16_t)(gp->axis_x << 6);
+        data.ly = (int16_t)(gp->axis_y << 6);
+        data.lz = (int16_t)(gp->brake << 5);
+        data.rx = (int16_t)(gp->axis_rx << 6);
+        data.ry = (int16_t)(gp->axis_ry << 6);
+        data.rz = (int16_t)(gp->throttle << 5);
         PostEvent(event);
 
         static size_t num_events = 0;

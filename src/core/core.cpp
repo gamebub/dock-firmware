@@ -34,18 +34,6 @@ enum class State {
     Error,
 };
 
-struct GamepadData {
-    // From bit 0:
-    // (A B X Y) (Up Down Right Left) (System Select Start Capture(?)) (L1 R1 L2 R2 L3 R3)
-    uint32_t buttons;
-    int16_t lx;
-    int16_t ly;
-    int16_t lz;
-    int16_t rx;
-    int16_t ry;
-    int16_t rz;
-};
-
 constexpr size_t kStackSize = 8 * 1024;
 constexpr uint32_t kEventQueueLength = 32;
 
@@ -169,19 +157,9 @@ void HandleEvent(const Event& event) {
         }
 
         case EventType::kGamepadData: {
-            const auto& data = event.gamepad_data.data;
-            // buttons: 32 bits: (A B X Y) (Up Down Right Left) (System Select Start Capture(?)) (L1 R1 L2 R2 L3 R3)
-            GamepadData gp;
-            gp.buttons = ((data.buttons & 0b1111) << 0) | ((data.dpad & 0b1111) << 4) |
-                         ((data.misc_buttons & 0b1111) << 8) | (((data.buttons & 0b1111110000) >> 4) << 12);
-            gp.lx = (int16_t)(data.axis_x << 6);
-            gp.ly = (int16_t)(data.axis_y << 6);
-            gp.lz = (int16_t)(data.brake << 5);
-            gp.rx = (int16_t)(data.axis_rx << 6);
-            gp.ry = (int16_t)(data.axis_ry << 6);
-            gp.rz = (int16_t)(data.throttle << 5);
-            // log_info("Gamepad: [%05lX] (%6d %6d) (%6d %6d) (%6d %6d)", gp.buttons, gp.lx, gp.ly, gp.lz, gp.rx, gp.ry,
-            //          gp.rz);
+            const auto& gp = event.gamepad_data.data;
+            // log_info("Gamepad: [%05lX] (%6d %6d) (%6d %6d) (%6d %6d)", gp.buttons, gp.lx, gp.ly, gp.rx, gp.ry, gp.lz,
+            //  gp.rz);
             if (state == State::Active) {
                 // Requires little endian
                 char buffer[64];

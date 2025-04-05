@@ -10,6 +10,19 @@ struct Gamepad {
     uint32_t id;
     uni_controller_type_t gamepad_type;
     char device_id[18];
+    bool wired;
+};
+
+struct GamepadData {
+    // From bit 0:
+    // (A B X Y) (Up Down Right Left) (System Select Start Capture(?)) (L1 R1 L2 R2 L3 R3)
+    uint32_t buttons;
+    int16_t lx;
+    int16_t ly;
+    int16_t lz;
+    int16_t rx;
+    int16_t ry;
+    int16_t rz;
 };
 
 enum class EventType : uint32_t {
@@ -52,7 +65,7 @@ struct Event {
 
         struct {
             uint32_t gamepad_id;
-            uni_gamepad_t data;
+            GamepadData data;
         } gamepad_data;
     };
 };
