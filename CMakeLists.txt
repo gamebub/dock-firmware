@@ -33,6 +33,7 @@ set(BTSTACK_ROOT ${PICO_SDK_PATH}/lib/btstack)
 set(BLUEPAD32_ROOT ${EXTERNAL_DIR}/bluepad32)
 set(PICO_PIO_USB_PATH ${EXTERNAL_DIR}/Pico-PIO-USB)
 set(FREERTOS_KERNEL_PATH ${EXTERNAL_DIR}/FreeRTOS-Kernel)
+set(TUSB_XINPUT_PATH ${EXTERNAL_DIR}/tusb_xinput)
 
 set(PICO_BOARD pico_w CACHE STRING "Board type")
 set(TINYUSB_OPT_OS OPT_OS_FREERTOS)
@@ -58,6 +59,7 @@ add_executable(dock-firmware
     ${SRC}/gpio/gpio.cpp
     ${SRC}/led/led.cpp
     ${SRC}/usb_host/usb_host.cpp
+    ${SRC}/usb_host/xinput.cpp
     ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/dcd_pio_usb.c
     ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/hcd_pio_usb.c
 )
@@ -119,10 +121,15 @@ target_link_libraries(dock-firmware
     pico_pio_usb
     FreeRTOS-Kernel
     hardware_pwm
+    xinput_host
 )
 
 add_subdirectory(${BLUEPAD32_ROOT}/src/components/bluepad32 libbluepad32)
 add_subdirectory(${PICO_PIO_USB_PATH} ${CMAKE_BINARY_DIR}/Pico-PIO-USB)
+add_subdirectory(${TUSB_XINPUT_PATH} xinput_host)
+
+# Needed for xinput_host
+add_library(tinyusb ALIAS tinyusb_host)
 
 pico_add_extra_outputs(dock-firmware)
 

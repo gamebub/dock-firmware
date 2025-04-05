@@ -14,6 +14,7 @@
 #include "stream_buffer.h"
 #include "task.h"
 #include "tusb.h"
+#include "xinput_host.h"
 
 namespace {
 constexpr size_t kStackSize = 8 * 1024;
@@ -176,4 +177,9 @@ void tuh_cdc_umount_cb(uint8_t idx) {
         event.type = EventType::kHandheldUnmount;
         PostEvent(event);
     }
+}
+
+usbh_class_driver_t const* usbh_app_driver_get_cb(uint8_t* driver_count) {
+    *driver_count = 1;
+    return &usbh_xinput_driver;
 }

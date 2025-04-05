@@ -91,7 +91,7 @@
 //--------------------------------------------------------------------
 
 // Size of buffer to hold descriptors and other data used for enumeration
-#define CFG_TUH_ENUMERATION_BUFSIZE 256
+#define CFG_TUH_ENUMERATION_BUFSIZE 512
 
 #define CFG_TUH_HUB                 1 // number of supported hubs
 #define CFG_TUH_CDC                 1 // CDC ACM
@@ -101,6 +101,7 @@
 #define CFG_TUH_HID                 0
 #define CFG_TUH_MSC                 0
 #define CFG_TUH_VENDOR              0
+#define CFG_TUH_XINPUT              1
 
 // max device support (excluding hub device): 1 hub typically has 4 ports
 #define CFG_TUH_DEVICE_MAX          (3*CFG_TUH_HUB + 1)
