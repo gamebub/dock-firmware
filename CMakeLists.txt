@@ -58,6 +58,7 @@ add_executable(dock-firmware
     ${SRC}/handheld/handheld.cpp
     ${SRC}/gpio/gpio.cpp
     ${SRC}/led/led.cpp
+    ${SRC}/usb_host/hid.cpp
     ${SRC}/usb_host/usb_host.cpp
     ${SRC}/usb_host/xinput.cpp
     ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/dcd_pio_usb.c
