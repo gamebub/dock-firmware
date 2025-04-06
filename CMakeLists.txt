@@ -1,5 +1,3 @@
-# Generated Cmake Pico project file
-
 cmake_minimum_required(VERSION 3.13)
 
 set(CMAKE_C_STANDARD 17)
@@ -126,12 +124,11 @@ target_link_libraries(dock-firmware
     xinput_host
 )
 
-add_subdirectory(${BLUEPAD32_ROOT}/src/components/bluepad32 libbluepad32)
-add_subdirectory(${PICO_PIO_USB_PATH} ${CMAKE_BINARY_DIR}/Pico-PIO-USB)
-add_subdirectory(${TUSB_XINPUT_PATH} xinput_host)
+add_subdirectory(${BLUEPAD32_ROOT}/src/components/bluepad32 libbluepad32 SYSTEM)
+add_subdirectory(${PICO_PIO_USB_PATH} ${CMAKE_BINARY_DIR}/Pico-PIO-USB SYSTEM)
+add_subdirectory(${TUSB_XINPUT_PATH} xinput_host SYSTEM)
 
 # Needed for xinput_host
 add_library(tinyusb ALIAS tinyusb_host)
 
 pico_add_extra_outputs(dock-firmware)
-

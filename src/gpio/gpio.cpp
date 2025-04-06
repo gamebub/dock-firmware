@@ -51,6 +51,7 @@ void ButtonLongPressTask(TimerHandle_t) {
 }
 
 void GpioCallback(unsigned int gpio, uint32_t events) {
+    static_cast<void>(events);
     if (gpio == PIN_BUTTON) {
         xTimerResetFromISR(button_debounce_timer, nullptr);
         xTimerResetFromISR(button_long_press_timer, nullptr);

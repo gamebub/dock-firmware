@@ -16,6 +16,7 @@ static std::array<std::optional<UsbHidGamepad>, kMaxGamepads> gamepads;
 
 bool IsHidGamepad(std::span<const uint8_t> descriptor) {
     // TODO
+    static_cast<void>(descriptor);
     return true;
 }
 

@@ -33,7 +33,7 @@ int main() {
     return 0;
 }
 
-void vApplicationStackOverflowHook(TaskHandle_t Task, char *pcTaskName) {
+void vApplicationStackOverflowHook(TaskHandle_t /* task */, char *pcTaskName) {
     panic("Stack overflow in task %s\n", *pcTaskName);
 }
 
