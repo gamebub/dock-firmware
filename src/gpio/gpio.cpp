@@ -64,6 +64,14 @@ void InitGpio() {
     gpio_pull_up(PIN_BUTTON);
     gpio_set_irq_enabled_with_callback(PIN_BUTTON, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &GpioCallback);
 
+    // Put HDMI chip into inactive state
+    gpio_init(PIN_HDMI_OE_N);
+    gpio_init(PIN_HDMI_DDC_EN);
+    gpio_set_dir(PIN_HDMI_OE_N, GPIO_OUT);
+    gpio_set_dir(PIN_HDMI_DDC_EN, GPIO_OUT);
+    gpio_put(PIN_HDMI_OE_N, 1);
+    gpio_put(PIN_HDMI_DDC_EN, 0);
+
     // Setup debounce timer.
     button_debounce_timer =
         xTimerCreate("button_debounce", kDebounceInterval, /* uxAutoReload= */ false, nullptr, ButtonDebounceTask);

@@ -93,6 +93,9 @@ target_compile_definitions(dock-firmware PRIVATE
   PIN_USB_DP=6
   PIN_LED=13
   PIN_BUTTON=3
+  PIN_HDMI_DDC_EN=20
+  PIN_HDMI_OE_N=21
+  PIN_HDMI_HPD=22
 )
 
 # Add the standard library to the build
