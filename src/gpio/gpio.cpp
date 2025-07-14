@@ -66,11 +66,11 @@ void InitGpio() {
 
     // Put HDMI chip into inactive state
     gpio_init(PIN_HDMI_OE_N);
-    gpio_init(PIN_HDMI_DDC_EN);
+    // gpio_init(PIN_HDMI_DDC_EN);
     gpio_set_dir(PIN_HDMI_OE_N, GPIO_OUT);
-    gpio_set_dir(PIN_HDMI_DDC_EN, GPIO_OUT);
+    // gpio_set_dir(PIN_HDMI_DDC_EN, GPIO_OUT);
     gpio_put(PIN_HDMI_OE_N, 1);
-    gpio_put(PIN_HDMI_DDC_EN, 0);
+    // gpio_put(PIN_HDMI_DDC_EN, 0);
 
     // Setup debounce timer.
     button_debounce_timer =
