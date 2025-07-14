@@ -9,7 +9,7 @@
 	url = https://github.com/sekigon-gonnoc/Pico-PIO-USB/
 [submodule "external/FreeRTOS-Kernel"]
 	path = external/FreeRTOS-Kernel
-	url = https://github.com/FreeRTOS/FreeRTOS-Kernel.git
+	url = https://github.com/raspberrypi/FreeRTOS-Kernel.git
 [submodule "external/tusb_xinput"]
 	path = external/tusb_xinput
 	url = https://github.com/Ryzee119/tusb_xinput.git
