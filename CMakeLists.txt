@@ -169,3 +169,5 @@ target_compile_definitions(bluepad32 PUBLIC
 )
 
 pico_add_extra_outputs(dock-firmware)
+
+pico_generate_pio_header(dock-firmware ${CMAKE_CURRENT_LIST_DIR}/src/led/ws2812.pio OUTPUT_DIR ${CMAKE_BINARY_DIR}/generated)

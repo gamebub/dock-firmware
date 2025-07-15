@@ -11,6 +11,7 @@
 #include "priorities.h"
 #include "queue.h"
 #include "task.h"
+#include "ws2812.pio.h"
 
 namespace {
 
@@ -19,13 +20,17 @@ constexpr uint32_t kEventQueueLength = 8;
 
 QueueHandle_t event_queue = nullptr;
 
+PIO led_pio;
+uint led_pio_sm;
+
 struct LedEvent {
     LedState state;
     bool set;
 };
 
 void LedSetColor(LedColor color) {
-    // TODO handle RGB
+    uint32_t c = ((uint32_t)(color.r) << 16) | ((uint32_t)(color.g) << 24) | ((uint32_t)(color.b) << 8);
+    pio_sm_put_blocking(led_pio, led_pio_sm, c);
 }
 
 void LedTask(void*) {
@@ -54,7 +59,12 @@ void PostLedEvent(LedState state, bool set) {
 }  // namespace
 
 void InitLed() {
-    // TODO: set up RGB led
+    // Set up RGB led
+    uint offset;
+    bool success = pio_claim_free_sm_and_add_program_for_gpio_range(&ws2812_program, &led_pio, &led_pio_sm, &offset,
+                                                                    PIN_LED, 1, true);
+    hard_assert(success);
+    ws2812_program_init(led_pio, led_pio_sm, offset, PIN_LED, 800000, false);
 
     // Set up LED event queue
     event_queue = xQueueCreate(kEventQueueLength, sizeof(LedEvent));
