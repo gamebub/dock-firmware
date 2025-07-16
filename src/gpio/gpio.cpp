@@ -64,17 +64,23 @@ void InitGpio() {
     gpio_pull_up(PIN_BUTTON);
     gpio_set_irq_enabled_with_callback(PIN_BUTTON, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &GpioCallback);
 
-    // Put HDMI chip into inactive state
+    // Enable HDMI chip
     gpio_init(PIN_HDMI_OE_N);
-    // gpio_init(PIN_HDMI_DDC_EN);
+    gpio_init(PIN_HDMI_VBIAS);
     gpio_set_dir(PIN_HDMI_OE_N, GPIO_OUT);
-    // gpio_set_dir(PIN_HDMI_DDC_EN, GPIO_OUT);
-    gpio_put(PIN_HDMI_OE_N, 1);
-    // gpio_put(PIN_HDMI_DDC_EN, 0);
+    gpio_set_dir(PIN_HDMI_VBIAS, GPIO_OUT);
+    SetHdmiActive(false);
 
     // Setup debounce timer.
     button_debounce_timer =
         xTimerCreate("button_debounce", kDebounceInterval, /* uxAutoReload= */ false, nullptr, ButtonDebounceTask);
     button_long_press_timer =
         xTimerCreate("button_longpress", kLongPressTime, /* uxAutoReload= */ false, nullptr, ButtonLongPressTask);
+}
+
+void SetHdmiActive(bool active) {
+    // nOE 1: inactive, 0: active
+    gpio_put(PIN_HDMI_OE_N, !active);
+    // VBIAS 1: ties to VDD (active). VBIAS 0: ties to ground (inactive).
+    gpio_put(PIN_HDMI_VBIAS, active);
 }

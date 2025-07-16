@@ -8,6 +8,7 @@
 
 #include "FreeRTOS.h"
 #include "bluetooth/bluetooth.h"
+#include "gpio/gpio.h"
 #include "led/led.h"
 #include "log/log.h"
 #include "pico/mutex.h"
@@ -81,6 +82,7 @@ void HandleHandheldResponse(const std::string_view response) {
                     WriteGamepadConnected(gamepad);
                 }
                 state = State::Active;
+                SetHdmiActive(true);
                 UpdateLedBehavior();
             } else {
                 log_error("Dock begin error");
@@ -112,6 +114,7 @@ void HandleEvent(const Event& event) {
             log_info("Handheld unmount");
             state = State::Idle;
             UpdateLedBehavior();
+            SetHdmiActive(false);
             break;
 
         case EventType::kHandheldRxData: {
