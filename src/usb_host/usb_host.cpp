@@ -7,6 +7,7 @@
 #include "FreeRTOS.h"
 #include "core/core.h"
 #include "handheld/handheld.h"
+#include "hardware/gpio.h"
 #include "host/hcd.h"
 #include "pico/time.h"
 #include "pio_usb.h"
@@ -61,6 +62,16 @@ void usb_host_task(void*) {
 }
 
 void InitUsbHost() {
+    // Take USB Hub chip out of reset
+    gpio_init(PIN_USB_RESET_N);
+    gpio_set_dir(PIN_USB_RESET_N, GPIO_OUT);
+    gpio_put(PIN_USB_RESET_N, 1);
+
+    // Enable VBUS
+    gpio_init(PIN_USB_VBUS_EN);
+    gpio_set_dir(PIN_USB_VBUS_EN, GPIO_OUT);
+    gpio_put(PIN_USB_VBUS_EN, 1);
+
     // Create USB task, pin it to core 1.
     TaskHandle_t task_handle;
     xTaskCreate(usb_host_task, "usbh", kStackSize, NULL, static_cast<UBaseType_t>(TaskPriority::kUsbHost),

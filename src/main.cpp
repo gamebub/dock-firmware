@@ -21,10 +21,10 @@ int main() {
     printf("serial number: %s\n", DOCK_SERIAL_NUM);
 
     // InitLed();
-    // InitCore();
-    // InitUsbHost();
-    // InitBluetooth();
-    // InitGpio();
+    InitCore();
+    InitUsbHost();
+    InitBluetooth();
+    InitGpio();
 
     // SetLedBehavior(LedBehavior::kBreatheSlow);
 
