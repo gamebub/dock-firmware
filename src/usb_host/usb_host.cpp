@@ -7,6 +7,7 @@
 #include "FreeRTOS.h"
 #include "core/core.h"
 #include "handheld/handheld.h"
+#include "hardware/clocks.h"
 #include "hardware/gpio.h"
 #include "host/hcd.h"
 #include "pico/time.h"
@@ -62,6 +63,12 @@ void usb_host_task(void*) {
 }
 
 void InitUsbHost() {
+    // Output 12 MHz clock to USB IC
+    gpio_set_function(PIN_USB_CLK_OUT, GPIO_FUNC_GPCK);
+    gpio_set_dir(PIN_USB_CLK_OUT, true);
+    // Crystal is 12 MHz, so divide by 1.
+    clock_gpio_init(PIN_USB_CLK_OUT, CLOCKS_CLK_GPOUT2_CTRL_AUXSRC_VALUE_XOSC_CLKSRC, 1);
+
     // Take USB Hub chip out of reset
     gpio_init(PIN_USB_RESET_N);
     gpio_set_dir(PIN_USB_RESET_N, GPIO_OUT);

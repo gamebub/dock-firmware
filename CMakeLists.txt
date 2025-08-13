@@ -117,6 +117,7 @@ target_compile_definitions(dock-firmware PRIVATE
   PIN_USB_VBUS_FLG=12
   PIN_USB_RESET_N=13
   PIN_USB_DP=14
+  PIN_USB_CLK_OUT=23
   PIN_LED=25
 )
 
