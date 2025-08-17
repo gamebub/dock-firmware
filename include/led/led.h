@@ -2,16 +2,41 @@
 
 #include <cstdint>
 
-enum class LedBehavior : uint32_t {
+struct LedColor {
+    constexpr LedColor(uint8_t r, uint8_t g, uint8_t b) : r(r), g(g), b(b) {}
+
+    uint8_t r = 0;
+    uint8_t g = 0;
+    uint8_t b = 0;
+};
+
+static constexpr LedColor kColorBlack(0, 0, 0);
+
+enum class LedPattern {
     kOff,
-    kOn,
-    kBlinkSlow,
-    kBlinkFast,
-    kBreatheSlow,
-    kBreatheFast,
+    kSolid,
+    kBlink,
+    kBreathe,
+};
+
+struct LedBehavior {
+    LedPattern pattern;
+    LedColor color;
+    uint32_t period_ms;
+    uint32_t repeat = 0;
+};
+
+enum class LedState : uint32_t {
+    kStandby,
+    kBluetoothPairing,
+    kDockActive,
+    kCount,
 };
 
 void InitLed();
 
-/// Set the current indicator LED behavior
-void SetLedBehavior(LedBehavior behavior);
+/// Enable a led state (reference counted)
+void SetLedState(LedState state);
+
+/// Disable a led state (reference counted);
+void UnsetLedState(LedState state);

@@ -20,13 +20,13 @@ int main() {
     printf("software version: %s\n", DOCK_SW_VERSION);
     printf("serial number: %s\n", DOCK_SERIAL_NUM);
 
-    // InitLed();
+    InitLed();
     InitCore();
     InitUsbHost();
     InitBluetooth();
     InitGpio();
 
-    // SetLedBehavior(LedBehavior::kBreatheSlow);
+    SetLedState(LedState::kStandby);
 
     // Start FreeRTOS (doesn't return).
     vTaskStartScheduler();

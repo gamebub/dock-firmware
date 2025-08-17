@@ -5,6 +5,7 @@
 enum class TaskPriority : uint32_t {
     kMin = 1,
     kCore = 2,
-    kBluetooth = 3,
-    kUsbHost = 4,
+    kLed = 3,
+    kBluetooth = 4,
+    kUsbHost = 5,
 };

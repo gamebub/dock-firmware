@@ -40,16 +40,6 @@ State state = State::Idle;
 std::vector<Gamepad> gamepads;
 bool is_pairing = false;
 
-void UpdateLedBehavior() {
-    if (is_pairing) {
-        SetLedBehavior(LedBehavior::kBlinkFast);
-    } else if (state == State::Active) {
-        SetLedBehavior(LedBehavior::kOn);
-    } else {
-        SetLedBehavior(LedBehavior::kOff);
-    }
-}
-
 void WriteGamepadConnected(const Gamepad& gamepad) {
     char buffer[64];
     // >gamepad_connect,slot,name,unique_id
@@ -83,7 +73,7 @@ void HandleHandheldResponse(const std::string_view response) {
                 }
                 state = State::Active;
                 SetHdmiActive(true);
-                UpdateLedBehavior();
+                SetLedState(LedState::kDockActive);
             } else {
                 log_error("Dock begin error");
                 state = State::Error;
@@ -113,7 +103,7 @@ void HandleEvent(const Event& event) {
         case EventType::kHandheldUnmount:
             log_info("Handheld unmount");
             state = State::Idle;
-            UpdateLedBehavior();
+            UnsetLedState(LedState::kDockActive);
             SetHdmiActive(false);
             break;
 
@@ -133,8 +123,8 @@ void HandleEvent(const Event& event) {
             }
 
             is_pairing = false;
+            UnsetLedState(LedState::kBluetoothPairing);
             BluetoothEnablePairing(false);
-            UpdateLedBehavior();
             break;
         }
 
@@ -185,7 +175,7 @@ void HandleEvent(const Event& event) {
             log_info("Enter pairing mode");
             is_pairing = true;
             BluetoothEnablePairing(true);
-            UpdateLedBehavior();
+            SetLedState(LedState::kBluetoothPairing);
             break;
         }
 
