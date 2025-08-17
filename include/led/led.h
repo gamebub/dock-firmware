@@ -22,11 +22,12 @@ enum class LedPattern {
 struct LedBehavior {
     LedPattern pattern;
     LedColor color;
-    uint32_t period_ms;
+    uint32_t period_ms = 0;
     uint32_t repeat = 0;
 };
 
 enum class LedState : uint32_t {
+    kNone,
     kStandby,
     kBluetoothPairing,
     kDockActive,
