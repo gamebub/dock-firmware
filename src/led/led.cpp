@@ -19,7 +19,9 @@ namespace {
 struct StateEntry {
     LedState state;
     LedBehavior behavior;
+    /// Priority, higher value is higher priority.
     uint32_t priority;
+    /// Whether this is a self-terminating event that represents an event that occured.
     bool transient = false;
 };
 
@@ -174,7 +176,6 @@ void LedWaitForEvent() {
 
 // Run a behavior. Returns true if it terminates normally.
 bool RunBehavior(LedBehavior behavior) {
-    // TODO: handle transient / terminating events
     switch (behavior.pattern) {
         case LedPattern::kOff: {
             LedSetColor(LedColor(0, 0, 0));
@@ -196,6 +197,13 @@ bool RunBehavior(LedBehavior behavior) {
                 if (LedTaskSleep(behavior.period_ms / 2)) {
                     return false;
                 }
+
+                if (behavior.repeat == 0) {
+                    continue;
+                } else if (behavior.repeat == 1) {
+                    return true;
+                }
+                behavior.repeat--;
             }
         }
         case LedPattern::kBreathe: {
@@ -213,6 +221,13 @@ bool RunBehavior(LedBehavior behavior) {
                     if (LedTaskSleep(/* ms= */ 50)) {
                         return false;
                     }
+
+                    if (behavior.repeat == 0) {
+                        continue;
+                    } else if (behavior.repeat == 1) {
+                        return true;
+                    }
+                    behavior.repeat--;
                 }
             }
         }

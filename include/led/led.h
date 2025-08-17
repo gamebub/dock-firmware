@@ -28,9 +28,11 @@ struct LedBehavior {
 
 enum class LedState : uint32_t {
     kNone,
+
     kStandby,
     kBluetoothPairing,
     kDockActive,
+
     kCount,
 };
 
