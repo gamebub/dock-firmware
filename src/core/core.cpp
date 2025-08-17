@@ -172,10 +172,15 @@ void HandleEvent(const Event& event) {
         }
 
         case EventType::kButtonLongPress: {
-            log_info("Enter pairing mode");
-            is_pairing = true;
-            BluetoothEnablePairing(true);
-            SetLedState(LedState::kBluetoothPairing);
+            is_pairing = !is_pairing;
+            if (is_pairing) {
+                log_info("Enter pairing mode");
+                SetLedState(LedState::kBluetoothPairing);
+            } else {
+                log_info("Exit pairing mode");
+                UnsetLedState(LedState::kBluetoothPairing);
+            }
+            BluetoothEnablePairing(is_pairing);
             break;
         }
 
