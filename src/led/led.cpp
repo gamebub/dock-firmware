@@ -3,6 +3,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <numbers>
 
 #include "FreeRTOS.h"
 #include "hardware/pwm.h"
@@ -193,7 +194,22 @@ bool RunBehavior(LedBehavior behavior) {
             }
         }
         case LedPattern::kBreathe: {
-            // TODO!
+            while (true) {
+                auto start = xTaskGetTickCount();
+                while (true) {
+                    float elapsed_ms = static_cast<float>((xTaskGetTickCount() - start)) * portTICK_PERIOD_MS;
+                    float t = elapsed_ms / behavior.period_ms;
+                    if (t >= 1.0) {
+                        LedSetColor(LedColor(0, 0, 0));
+                        break;
+                    }
+                    float intensity = (-cosf(t * 2.0f * std::numbers::pi) + 1.0f) / 2.0f;
+                    LedSetColor(behavior.color.scale(intensity));
+                    if (LedTaskSleep(/* ms= */ 50)) {
+                        return false;
+                    }
+                }
+            }
         }
     }
 

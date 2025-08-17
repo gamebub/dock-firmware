@@ -8,6 +8,12 @@ struct LedColor {
     uint8_t r = 0;
     uint8_t g = 0;
     uint8_t b = 0;
+
+    LedColor scale(float by) {
+        return LedColor(static_cast<uint8_t>((static_cast<float>(r) * by)),
+                        static_cast<uint8_t>((static_cast<float>(g) * by)),
+                        static_cast<uint8_t>((static_cast<float>(b) * by)));
+    }
 };
 
 static constexpr LedColor kColorBlack(0, 0, 0);
