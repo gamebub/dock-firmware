@@ -25,6 +25,7 @@ struct StateEntry {
 
 constexpr size_t kStackSize = 2 * 1024;
 constexpr uint32_t kEventQueueLength = 8;
+constexpr float kLedGamma = 2.2f;
 
 // State to behavior mapping, should be sorted from highest to lowest priority.
 constexpr auto kStateMap = std::to_array<StateEntry>({
@@ -52,7 +53,7 @@ constexpr auto kStateMap = std::to_array<StateEntry>({
         .behavior =
             LedBehavior{
                 .pattern = LedPattern::kSolid,
-                .color = LedColor(8, 0, 0),
+                .color = LedColor(32, 0, 0),
             },
         .priority = 1,
     },
@@ -70,8 +71,12 @@ struct LedEvent {
     bool set;
 };
 
-void LedSetColor(LedColor color) {
-    uint32_t c = ((uint32_t)(color.r) << 16) | ((uint32_t)(color.g) << 24) | ((uint32_t)(color.b) << 8);
+void LedSetColor(LedColor color, float scale = 1.0f) {
+    float r = powf((color.r / 255.0f * scale), kLedGamma);
+    float g = powf((color.g / 255.0f * scale), kLedGamma);
+    float b = powf((color.b / 255.0f * scale), kLedGamma);
+
+    uint32_t c = ((uint32_t)(r * 255.0f) << 16) | ((uint32_t)(g * 255.0f) << 24) | ((uint32_t)(b * 255.0f) << 8);
     pio_sm_put_blocking(led_pio, led_pio_sm, c);
 }
 
@@ -204,7 +209,7 @@ bool RunBehavior(LedBehavior behavior) {
                         break;
                     }
                     float intensity = (-cosf(t * 2.0f * std::numbers::pi) + 1.0f) / 2.0f;
-                    LedSetColor(behavior.color.scale(intensity));
+                    LedSetColor(behavior.color, intensity);
                     if (LedTaskSleep(/* ms= */ 50)) {
                         return false;
                     }
