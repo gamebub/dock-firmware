@@ -140,10 +140,11 @@ bool LedTaskSleep(uint32_t ms) {
     TickType_t deadline = xTaskGetTickCount() + (ms / portTICK_PERIOD_MS);
 
     while (true) {
-        TickType_t remaining = deadline - xTaskGetTickCount();
-        if (remaining <= 0) {
+        TickType_t now = xTaskGetTickCount();
+        if (now >= deadline) {
             return false;
         }
+        TickType_t remaining = deadline - now;
 
         LedEvent event{};
         auto result = xQueueReceive(event_queue, &event, remaining);
