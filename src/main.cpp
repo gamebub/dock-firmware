@@ -12,6 +12,7 @@
 #include "core/core.h"
 #include "gpio/gpio.h"
 #include "led/led.h"
+#include "usb_device/usb_device.h"
 #include "usb_host/usb_host.h"
 
 static inline void put_pixel(PIO pio, uint sm, uint32_t pixel_grb) {
@@ -24,6 +25,7 @@ static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
 
 int main() {
     stdio_init_all();
+    InitUsbDevice();
 
     printf("Game Bub Dock\n");
     printf("hardware version: %s\n", DOCK_HW_VERSION);
@@ -43,7 +45,7 @@ int main() {
     return 0;
 }
 
-void vApplicationStackOverflowHook(TaskHandle_t /* task */, char *pcTaskName) {
+void vApplicationStackOverflowHook(TaskHandle_t /* task */, char* pcTaskName) {
     panic("Stack overflow in task %s\n", *pcTaskName);
 }
 

@@ -80,6 +80,7 @@
 #ifndef BOARD_TUH_RHPORT
 #define BOARD_TUH_RHPORT      0
 #endif
+#define TUH_OPT_RHPORT 1
 
 // RHPort max operational speed can defined by board.mk
 #ifndef BOARD_TUH_MAX_SPEED
@@ -120,6 +121,34 @@
 // bit rate = 115200, 1 stop bit, no parity, 8 bit data width
 #define CFG_TUH_CDC_LINE_CODING_ON_ENUM   { 115200, CDC_LINE_CODING_STOP_BITS_1, CDC_LINE_CODING_PARITY_NONE, 8 }
 
+//--------------------------------------------------------------------
+// Device Configuration
+//--------------------------------------------------------------------
+#define CFG_TUD_ENABLED       1
+
+#ifndef BOARD_TUD_RHPORT
+#define BOARD_TUD_RHPORT      0
+#endif
+#define TUD_OPT_RHPORT 0
+
+// RHPort max operational speed can defined by board.mk
+#ifndef BOARD_TUD_MAX_SPEED
+#define BOARD_TUD_MAX_SPEED   OPT_MODE_DEFAULT_SPEED
+#endif
+
+#ifndef CFG_TUD_ENDPOINT0_SIZE
+#define CFG_TUD_ENDPOINT0_SIZE    64
+#endif
+
+//------------- CLASS -------------//
+#define CFG_TUD_CDC              1
+
+// CDC FIFO size of TX and RX
+#define CFG_TUD_CDC_RX_BUFSIZE   64
+#define CFG_TUD_CDC_TX_BUFSIZE   64
+
+// CDC Endpoint transfer buffer size, more is faster
+#define CFG_TUD_CDC_EP_BUFSIZE   64
 
 #ifdef __cplusplus
  }
