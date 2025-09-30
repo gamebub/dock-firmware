@@ -32,6 +32,8 @@ enum class EventType : uint32_t {
     kHandheldUnmount,
     /// Handheld RX data.
     kHandheldRxData,
+    /// Handheld ping
+    kHandheldPing,
 
     /// A gamepad has connected.
     kGamepadConnected,

@@ -15,6 +15,7 @@
 #include "priorities.h"
 #include "queue.h"
 #include "task.h"
+#include "timers.h"
 #include "usb_host/usb_host.h"
 
 namespace {
@@ -34,11 +35,15 @@ enum class State {
 
 constexpr size_t kStackSize = 8 * 1024;
 constexpr uint32_t kEventQueueLength = 32;
+constexpr TickType_t kPingInterval = pdMS_TO_TICKS(500);
+constexpr TickType_t kPingTimeout = pdMS_TO_TICKS(1000);
 
 QueueHandle_t event_queue = nullptr;
 State state = State::Idle;
 std::vector<Gamepad> gamepads;
 bool is_pairing = false;
+static TimerHandle_t ping_interval_timer;
+static TimerHandle_t ping_timeout_timer;
 
 void WriteGamepadConnected(const Gamepad& gamepad) {
     char buffer[64];
@@ -74,11 +79,18 @@ void HandleHandheldResponse(const std::string_view response) {
                 state = State::Active;
                 SetHdmiActive(true);
                 SetLedState(LedState::kDockActive);
+                xTimerReset(ping_timeout_timer, portMAX_DELAY);
+                xTimerReset(ping_interval_timer, portMAX_DELAY);
             } else {
                 log_error("Dock begin error");
                 state = State::Error;
             }
             break;
+        }
+        case State::Active: {
+            if (response.starts_with("ok")) {
+                xTimerReset(ping_timeout_timer, portMAX_DELAY);
+            }
         }
         default:
             break;
@@ -105,11 +117,24 @@ void HandleEvent(const Event& event) {
             state = State::Idle;
             UnsetLedState(LedState::kDockActive);
             SetHdmiActive(false);
+            xTimerStop(ping_timeout_timer, portMAX_DELAY);
             break;
 
         case EventType::kHandheldRxData: {
             const auto& data = event.handheld_rx_data;
             HandleHandheldResponse(std::string_view((char*)&data.data, data.len));
+            break;
+        }
+
+        case EventType::kHandheldPing: {
+            if (state != State::Active) {
+                break;
+            }
+            char command[] = "\n>get_hwinfo\n";
+            UsbWriteHandheldData((uint8_t*)command, sizeof(command) - 1);
+            // TODO: perhaps this should only happen if we're getting close to the timeout
+            // (e.g. treat it as a watchdog)
+            xTimerReset(ping_interval_timer, portMAX_DELAY);
             break;
         }
 
@@ -199,10 +224,31 @@ void CoreTask(void*) {
     }
 }
 
+void HandheldPingTask(TimerHandle_t) {
+    Event event{};
+    event.type = EventType::kHandheldPing;
+    PostEvent(event);
+}
+
+void HandheldPingTimeoutTask(TimerHandle_t) {
+    log_warn("Handheld timed out");
+    Event event{};
+    event.type = EventType::kHandheldUnmount;
+    PostEvent(event);
+}
+
 }  // namespace
 
 void InitCore() {
     event_queue = xQueueCreate(kEventQueueLength, sizeof(Event));
+
+    // Setup ping timer.
+    // TODO: remove once the USB bug is figured out, where repeatedly sending
+    // USB CDC data prevents tinyusb from realizing the device was disconnected
+    ping_timeout_timer =
+        xTimerCreate("handheld_timeout", kPingTimeout, /* uxAutoReload= */ false, nullptr, HandheldPingTimeoutTask);
+    ping_interval_timer =
+        xTimerCreate("handheld_ping", kPingInterval, /* uxAutoReload= */ false, nullptr, HandheldPingTask);
 
     TaskHandle_t task_handle;
     xTaskCreate(CoreTask, "core", kStackSize, NULL, static_cast<UBaseType_t>(TaskPriority::kCore), &task_handle);
