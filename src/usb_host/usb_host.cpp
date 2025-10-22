@@ -67,7 +67,7 @@ void InitUsbHost() {
     gpio_set_function(PIN_USB_CLK_OUT, GPIO_FUNC_GPCK);
     gpio_set_dir(PIN_USB_CLK_OUT, true);
     // Crystal is 12 MHz, so divide by 1.
-    clock_gpio_init(PIN_USB_CLK_OUT, CLOCKS_CLK_GPOUT2_CTRL_AUXSRC_VALUE_XOSC_CLKSRC, 1);
+    clock_gpio_init(PIN_USB_CLK_OUT, CLOCKS_CLK_GPOUT0_CTRL_AUXSRC_VALUE_XOSC_CLKSRC, 1);
 
     // Take USB Hub chip out of reset
     gpio_init(PIN_USB_RESET_N);

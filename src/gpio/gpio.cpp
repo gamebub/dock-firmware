@@ -67,8 +67,10 @@ void InitGpio() {
     // Enable HDMI chip
     gpio_init(PIN_HDMI_OE_N);
     gpio_init(PIN_HDMI_VBIAS);
+    gpio_init(PIN_HDMI_5V_EN);
     gpio_set_dir(PIN_HDMI_OE_N, GPIO_OUT);
     gpio_set_dir(PIN_HDMI_VBIAS, GPIO_OUT);
+    gpio_set_dir(PIN_HDMI_5V_EN, GPIO_OUT);
     SetHdmiActive(false);
 
     // Setup debounce timer.
@@ -83,4 +85,6 @@ void SetHdmiActive(bool active) {
     gpio_put(PIN_HDMI_OE_N, !active);
     // VBIAS 1: ties to VDD (active). VBIAS 0: ties to ground (inactive).
     gpio_put(PIN_HDMI_VBIAS, active);
+    // HDMI 5V EN: 1 active
+    gpio_put(PIN_HDMI_5V_EN, active);
 }
