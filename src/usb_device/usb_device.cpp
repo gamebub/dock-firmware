@@ -1,5 +1,6 @@
 #include "usb_device/usb_device.h"
 
+#include <array>
 #include <cstdint>
 
 #include "FreeRTOS.h"
@@ -13,48 +14,37 @@
 namespace {
 constexpr size_t kStackSize = 8 * 1024;
 constexpr size_t kStdoutTimeoutUs = 500000;
+constexpr size_t kBufferCapacity = 2048;
 
 SemaphoreHandle_t mutex;
-
-bool stdio_usb_connected(void) {
-    return tud_cdc_connected();
-}
+size_t tx_buffer_count = 0;
+size_t tx_buffer_head = 0;
+std::array<char, kBufferCapacity> tx_buffer = {};
 
 void stdio_usb_out_chars(const char* buf, int length) {
-    static uint64_t last_avail_time;
     xSemaphoreTake(mutex, portMAX_DELAY);
-    if (stdio_usb_connected()) {
-        for (int i = 0; i < length;) {
-            int n = length - i;
-            int avail = (int)tud_cdc_write_available();
-            if (n > avail) n = avail;
-            if (n) {
-                int n2 = (int)tud_cdc_write(buf + i, (uint32_t)n);
-                tud_task_ext(0, false);
-                tud_cdc_write_flush();
-                i += n2;
-                last_avail_time = time_us_64();
-            } else {
-                tud_task_ext(0, false);
-                tud_cdc_write_flush();
-                if (!stdio_usb_connected() ||
-                    (!tud_cdc_write_available() && time_us_64() > last_avail_time + kStdoutTimeoutUs)) {
-                    break;
-                }
-            }
-        }
-    } else {
-        last_avail_time = 0;
+
+    // Write to the buffer.
+    // Current behavior: if it fills up, drop data.
+    // TODO use memcpy
+    size_t write_len = static_cast<size_t>(length);
+    if (write_len > (tx_buffer.size() - tx_buffer_count)) {
+        write_len = tx_buffer.size() - tx_buffer_count;
     }
+
+    size_t tx_buffer_tail = (tx_buffer_head + tx_buffer_count) % tx_buffer.size();
+    for (size_t i = 0; i < write_len; i++) {
+        tx_buffer[tx_buffer_tail++] = buf[i];
+        if (tx_buffer_tail >= tx_buffer.size()) {
+            tx_buffer_tail = 0;
+        }
+    }
+    tx_buffer_count += write_len;
     xSemaphoreGive(mutex);
 }
 
 void stdio_usb_out_flush(void) {
-    xSemaphoreTake(mutex, portMAX_DELAY);
-    do {
-        tud_task_ext(0, false);
-    } while (tud_cdc_write_flush());
-    xSemaphoreGive(mutex);
+    // Nothing to do, it'll be flushed in the task.
 }
 
 int stdio_usb_in_chars(char* buf, int length) {
@@ -75,10 +65,41 @@ stdio_driver_t stdio_usb = {
 }  // namespace
 
 void usb_device_task(void*) {
+    uint64_t connection_time = 0;
+    bool is_connected = false;
+
     while (true) {
         xSemaphoreTake(mutex, portMAX_DELAY);
         tud_task_ext(0, false);
-        tud_cdc_write_flush();
+
+        if (tud_cdc_connected()) {
+            if (!is_connected) {
+                is_connected = true;
+                connection_time = time_us_64();
+            }
+        } else {
+            is_connected = false;
+        }
+
+        // Wait for at least 50us after connection to flush
+        if (is_connected && time_us_64() > connection_time + 50000) {
+            // Try flushing the buffer as much as possible
+            // TODO write a while chunk, not byte-by-byte
+            while (tx_buffer_count > 0) {
+                if (tud_cdc_write_available() > 0) {
+                    tud_cdc_write(tx_buffer.data() + tx_buffer_head, 1);
+                    tx_buffer_count--;
+                    tx_buffer_head++;
+                    if (tx_buffer_head >= tx_buffer.size()) {
+                        tx_buffer_head = 0;
+                    }
+                } else {
+                    break;
+                }
+            }
+            tud_cdc_write_flush();
+        }
+
         xSemaphoreGive(mutex);
         vTaskDelay(5);
     }
@@ -86,6 +107,12 @@ void usb_device_task(void*) {
 
 void InitUsbDevice() {
     mutex = xSemaphoreCreateMutex();
+
+    tud_cdc_configure_t cdc_config = TUD_CDC_CONFIGURE_DEFAULT();
+    cdc_config.tx_overwritabe_if_not_connected = 1;
+    cdc_config.tx_persistent = 1;
+    cdc_config.rx_persistent = 1;
+    tud_cdc_configure(&cdc_config);
     tud_init(0);
 
     stdio_set_driver_enabled(&stdio_usb, true);
