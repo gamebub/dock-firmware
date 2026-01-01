@@ -58,6 +58,7 @@ add_executable(dock-firmware
     ${SRC}/handheld/handheld.cpp
     ${SRC}/gpio/gpio.cpp
     ${SRC}/led/led.cpp
+    ${SRC}/hwinfo/hwinfo.cpp
     ${SRC}/usb_device/usb_device.cpp
     ${SRC}/usb_device/descriptors.c
     ${SRC}/usb_device/reset_interface.c
@@ -77,8 +78,6 @@ pico_enable_stdio_uart(dock-firmware 1)
 pico_enable_stdio_usb(dock-firmware 0)
 target_compile_definitions(dock-firmware PRIVATE
   DOCK_SW_VERSION="0.1"
-  DOCK_HW_VERSION="3"
-  DOCK_SERIAL_NUM="0" # TODO
 
   PICO_RP2350A=1
   PICO_RP2350_A2_SUPPORTED=1

@@ -11,6 +11,7 @@
 #include "bluetooth/bluetooth.h"
 #include "core/core.h"
 #include "gpio/gpio.h"
+#include "hwinfo/hwinfo.h"
 #include "led/led.h"
 #include "usb_device/usb_device.h"
 #include "usb_host/usb_host.h"
@@ -28,9 +29,11 @@ int main() {
     InitUsbDevice();
 
     printf("Game Bub Dock\n");
-    printf("hardware version: %s\n", DOCK_HW_VERSION);
+    auto hw_version = GetHardwareVersion();
+    printf("hardware version: %u.%u.%u.%u\n", hw_version.product, hw_version.major, hw_version.minor,
+           hw_version.variant);
     printf("software version: %s\n", DOCK_SW_VERSION);
-    printf("serial number: %s\n", DOCK_SERIAL_NUM);
+    printf("serial number: %08lX\n", GetSerialNumber());
 
     InitLed();
     InitCore();

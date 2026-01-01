@@ -9,6 +9,7 @@
 #include "FreeRTOS.h"
 #include "bluetooth/bluetooth.h"
 #include "gpio/gpio.h"
+#include "hwinfo/hwinfo.h"
 #include "led/led.h"
 #include "log/log.h"
 #include "pico/mutex.h"
@@ -59,8 +60,8 @@ void HandleHandheldResponse(const std::string_view response) {
             if (response.starts_with("ok")) {
                 log_info("Got hw_info: %.*s", response.size(), response.data());
                 char buffer[64];
-                int len = snprintf(buffer, sizeof(buffer), ">dock_begin,%s,%s,%s\n", DOCK_SERIAL_NUM, DOCK_HW_VERSION,
-                                   DOCK_SW_VERSION);
+                int len = snprintf(buffer, sizeof(buffer), ">dock_begin,%08lX,%08lX,%s\n", GetSerialNumber(),
+                                   GetHardwareVersion().value(), DOCK_SW_VERSION);
                 UsbWriteHandheldData((uint8_t*)buffer, MIN(len, sizeof(buffer) - 1));
                 state = State::WaitForDockBegin;
             } else {
