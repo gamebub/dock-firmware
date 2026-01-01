@@ -16,4 +16,4 @@ struct HardwareVersion {
 
 HardwareVersion GetHardwareVersion();
 
-uint32_t GetSerialNumber();
+extern "C" uint32_t GetSerialNumber();

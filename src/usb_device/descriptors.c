@@ -26,7 +26,6 @@
  * THE SOFTWARE.
  */
 
-#include "pico/unique_id.h"
 #include "pico/usb_reset_interface.h"
 #include "tusb.h"
 
@@ -34,8 +33,8 @@
 
 #define USBD_VID (0x1209)  // pid.codes
 #define USBD_PID (0xB011)  // Game Bub Dock
-#define USBD_MANUFACTURER "Game Bub"
-#define USBD_PRODUCT "Dock"
+#define USBD_MANUFACTURER "Second Bedroom"
+#define USBD_PRODUCT "Game Bub Dock"
 
 #define TUD_RPI_RESET_DESC_LEN 9
 #if !PICO_STDIO_USB_ENABLE_RESET_VIA_VENDOR_INTERFACE
@@ -71,6 +70,9 @@
 #define USBD_STR_SERIAL (0x03)
 #define USBD_STR_CDC (0x04)
 #define USBD_STR_RPI_RESET (0x05)
+
+// From hwinfo
+uint32_t GetSerialNumber();
 
 // Note: descriptors returned from callbacks must exist long enough for transfer to complete
 
@@ -116,7 +118,7 @@ static const uint8_t usbd_desc_cfg[USBD_DESC_LEN] = {
 #endif
 };
 
-static char usbd_serial_str[PICO_UNIQUE_BOARD_ID_SIZE_BYTES * 2 + 1];
+static char usbd_serial_str[8 + 1];
 
 static const char* const usbd_desc_str[] = {
     [USBD_STR_MANUF] = USBD_MANUFACTURER, [USBD_STR_PRODUCT] = USBD_PRODUCT,
@@ -144,10 +146,9 @@ const uint16_t* tud_descriptor_string_cb(uint8_t index, __unused uint16_t langid
 #endif
     static uint16_t desc_str[USBD_DESC_STR_MAX];
 
-    // Assign the SN using the unique flash id
-    if (!usbd_serial_str[0]) {
-        pico_get_unique_board_id_string(usbd_serial_str, sizeof(usbd_serial_str));
-    }
+    // Assign the SN.
+    uint32_t serial_number = GetSerialNumber();
+    snprintf(usbd_serial_str, sizeof(usbd_serial_str), "%08lX", serial_number);
 
     uint8_t len;
     if (index == 0) {
