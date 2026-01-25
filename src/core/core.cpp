@@ -294,7 +294,7 @@ void PostEvent(const Event& event) {
     auto result = xQueueSendToBack(event_queue, &event,
                                    /* xTicksToWait= */ 0);
     if (result != pdPASS) {
-        log_error("Failed to post event=%u", event.type);
+        log_error("Failed to post event=%lu", (uint32_t)event.type);
     }
 }
 

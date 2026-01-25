@@ -64,7 +64,7 @@ void usb_host_task(void*) {
         // Send transfers.
         ControlXfer event{};
         while (true) {
-            auto result = xQueueReceive(control_xfer_queue, &event, 0);
+            auto result = xQueuePeek(control_xfer_queue, &event, 0);
             if (result != pdPASS) {
                 break;
             }
@@ -79,10 +79,17 @@ void usb_host_task(void*) {
                     .complete_cb = control_xfer_complete_cb,
                     .user_data = event.tag,
                 };
-                // TODO can't actually enqueue multiple until they're complete
-                if (!tuh_control_xfer(&xfer)) {
-                    log_error("tuh_control_xfer failed");
+                if (tuh_control_xfer(&xfer)) {
+                    // Remove it from the queue.
+                    xQueueReceive(control_xfer_queue, nullptr, 0);
+                } else {
+                    // TODO: make sure these don't queue up too much
+                    log_warn("tuh_control_xfer failed");
+                    break;
                 }
+            } else {
+                // No handheld, clear the queue.
+                xQueueReset(control_xfer_queue);
             }
         }
     }
