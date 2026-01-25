@@ -10,7 +10,7 @@
 struct Gamepad {
     uint32_t id;
     uni_controller_type_t gamepad_type;
-    char device_id[18];
+    uint8_t device_id[8];
     bool wired;
 };
 

@@ -62,7 +62,7 @@ void WriteGamepadConnected(const Gamepad& gamepad) {
     alignas(4) std::array<uint8_t, 48> buffer{};
     *((uint32_t*)&buffer[0]) = gamepad.id;
     *((uint32_t*)&buffer[4]) = 0;
-    // todo gamepad device ID
+    memcpy(&buffer[8], gamepad.device_id, 8);
     const char* model = uni_gamepad_get_model_name(gamepad.gamepad_type);
     strncpy((char*)&buffer[16], model, 31);
     UsbHandheldControlOut(kRequestGamepadConnect, 0, 0, buffer);
