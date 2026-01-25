@@ -27,3 +27,11 @@ HardwareVersion GetHardwareVersion() {
 uint32_t GetSerialNumber() {
     return ReadOtpEntry(kPage, kRowSerialNumber);
 }
+
+FirmwareVersion GetFirmwareVersion() {
+    return FirmwareVersion{
+        .major = DOCK_FW_VERSION_MAJOR,
+        .minor = DOCK_FW_VERSION_MINOR,
+        .patch = DOCK_FW_VERSION_PATCH,
+    };
+}

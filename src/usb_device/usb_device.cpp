@@ -4,6 +4,8 @@
 #include <cstdint>
 
 #include "FreeRTOS.h"
+#include "hwinfo/hwinfo.h"
+#include "pico/bootrom.h"
 #include "pico/stdio.h"
 #include "pico/stdio/driver.h"
 #include "pico/time.h"
@@ -15,6 +17,9 @@ namespace {
 constexpr size_t kStackSize = 8 * 1024;
 constexpr size_t kStdoutTimeoutUs = 500000;
 constexpr size_t kBufferCapacity = 2048;
+
+constexpr size_t kRequestGetInfo = 0;
+constexpr size_t kRequestReboot = 1;
 
 SemaphoreHandle_t mutex;
 size_t tx_buffer_count = 0;
@@ -130,4 +135,47 @@ void tud_cdc_rx_cb(uint8_t itf) {
     char buf[64];
     uint32_t count = tud_cdc_read(buf, sizeof(buf));
     (void)count;
+}
+
+bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, const tusb_control_request_t* request) {
+    alignas(8) static uint8_t buffer[64];
+
+    if (stage != CONTROL_STAGE_SETUP) {
+        return true;
+    }
+
+    switch (request->bRequest) {
+        case kRequestGetInfo: {
+            if (request->bmRequestType_bit.direction == TUSB_DIR_IN &&
+                request->bmRequestType_bit.recipient == TUSB_REQ_RCPT_DEVICE) {
+                ((uint32_t*)buffer)[0] = 0;
+                ((uint32_t*)buffer)[1] = GetSerialNumber();
+                ((uint32_t*)buffer)[2] = GetHardwareVersion().value();
+                ((uint32_t*)buffer)[3] = GetFirmwareVersion().value();
+                tud_control_xfer(rhport, request, &buffer, 16);
+                return true;
+            }
+            return false;
+        }
+        case kRequestReboot: {
+            if (request->bmRequestType_bit.direction == TUSB_DIR_OUT &&
+                request->bmRequestType_bit.recipient == TUSB_REQ_RCPT_DEVICE) {
+                if (request->wValue == 1) {
+                    // Regular reboot.
+                    rom_reboot(BOOT_TYPE_NORMAL, /* delay_ms */ 100, 0, 0);
+                    tud_control_status(rhport, request);
+                    return true;
+                } else if (request->wValue == 2) {
+                    // BOOTSEL reboot.
+                    // TODO: set LED color to something?
+                    rom_reboot(BOOT_TYPE_BOOTSEL, /* delay_ms */ 100, /* DISABLE_MSD_INTERFACE */ 0x01, 0);
+                    tud_control_status(rhport, request);
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    return false;
 }

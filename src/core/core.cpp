@@ -93,8 +93,7 @@ void HandleHandheldXfer(bool success, uint8_t request, uintptr_t tag, std::span<
                 buffer[0] = 0;
                 buffer[1] = GetSerialNumber();
                 buffer[2] = GetHardwareVersion().value();
-                buffer[3] =
-                    (DOCK_FW_VERSION_MAJOR << 24) | (DOCK_FW_VERSION_MINOR << 16) | (DOCK_FW_VERSION_PATCH << 8);
+                buffer[3] = GetFirmwareVersion().value();
                 UsbHandheldControlOut(kRequestDockBegin, 0, 0, std::span((uint8_t*)buffer.data(), sizeof(buffer)));
                 state = State::WaitForDockBegin;
             } else {
