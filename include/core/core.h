@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 
@@ -30,8 +31,8 @@ enum class EventType : uint32_t {
     kHandheldMount,
     /// The maybe-handheld unmounted.
     kHandheldUnmount,
-    /// Handheld RX data.
-    kHandheldRxData,
+    /// Handheld xfer complete
+    kHandheldXferComplete,
     /// Handheld ping
     kHandheldPing,
 
@@ -53,9 +54,12 @@ struct Event {
 
     union {
         struct {
-            size_t len;
-            uint8_t data[64];
-        } handheld_rx_data;
+            uint8_t request;
+            bool success;
+            uint16_t length;
+            uintptr_t tag;
+            std::array<uint8_t, 64> data;
+        } handheld_xfer;
 
         struct {
             Gamepad gamepad;

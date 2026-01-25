@@ -9,5 +9,5 @@ class Handheld {
     constexpr static uint8_t kHubPort = 3;
 
     /// Check whether the USB VID and PID corresponds to a device.
-    static bool CheckUsbId(uint16_t vid, uint16_t pid) { return vid == 0x303a && pid == 0x1001; }
+    static bool CheckUsbId(uint16_t vid, uint16_t pid) { return vid == 0x1209 && pid == 0xB010; }
 };

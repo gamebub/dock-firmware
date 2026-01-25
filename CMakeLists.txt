@@ -77,7 +77,9 @@ pico_set_program_version(dock-firmware "0.1")
 pico_enable_stdio_uart(dock-firmware 1)
 pico_enable_stdio_usb(dock-firmware 0)
 target_compile_definitions(dock-firmware PRIVATE
-  DOCK_SW_VERSION="0.1"
+  DOCK_FW_VERSION_MAJOR=0
+  DOCK_FW_VERSION_MINOR=1
+  DOCK_FW_VERSION_PATCH=0
 
   PICO_RP2350A=1
   PICO_RP2350_A2_SUPPORTED=1

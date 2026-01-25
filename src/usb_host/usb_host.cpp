@@ -10,18 +10,20 @@
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
 #include "host/hcd.h"
+#include "log/log.h"
 #include "pico/time.h"
 #include "pio_usb.h"
 #include "priorities.h"
-#include "stream_buffer.h"
+#include "queue.h"
 #include "task.h"
 #include "tusb.h"
 #include "xinput_host.h"
 
 namespace {
 constexpr size_t kStackSize = 8 * 1024;
-constexpr size_t kRxBufferMaxLen = 64;
-constexpr size_t kTxBufferLen = 1024;
+constexpr size_t kRxBufferMaxLen = 128;
+constexpr size_t kXferQueueLen = 16;
+constexpr size_t kXferBufferLen = 64;
 
 /// USB state for a handheld device
 struct HandheldDeviceState {
@@ -34,8 +36,18 @@ struct HandheldDeviceState {
 
 static std::optional<HandheldDeviceState> handheld_device{};
 
-StreamBufferHandle_t tx_buffer;
+struct ControlXfer {
+    uintptr_t tag;
+    tusb_control_request_t setup;
+    std::array<uint8_t, kXferBufferLen> buffer;
+};
+
+QueueHandle_t control_xfer_queue = nullptr;
+std::array<uint8_t, kXferBufferLen> control_xfer_buffer;
+
 }  // namespace
+
+static void control_xfer_complete_cb(tuh_xfer_t* xfer);
 
 void usb_host_task(void*) {
     // Initialize USB host stack
@@ -47,16 +59,30 @@ void usb_host_task(void*) {
 
     while (1) {
         // TODO: figure out the best way to interleave device acceses and tuh_task without busy-looping.
-        tuh_task_ext(5, false);
+        tuh_task_ext(1, false);
 
-        // Send data to CDC
-        while (!xStreamBufferIsEmpty(tx_buffer)) {
-            uint8_t buf[64];
-            size_t len = xStreamBufferReceive(tx_buffer, buf, sizeof(buf), 0);
+        // Send transfers.
+        ControlXfer event{};
+        while (true) {
+            auto result = xQueueReceive(control_xfer_queue, &event, 0);
+            if (result != pdPASS) {
+                break;
+            }
             if (handheld_device.has_value()) {
-                uint8_t idx = handheld_device->cdc_index;
-                tuh_cdc_write(idx, buf, len);
-                tuh_cdc_write_flush(idx);
+                // TODO: only copy if OUT
+                memcpy(control_xfer_buffer.data(), event.buffer.data(), event.setup.wLength);
+                tuh_xfer_t xfer = {
+                    .daddr = handheld_device->address,
+                    .ep_addr = 0,
+                    .setup = &event.setup,
+                    .buffer = control_xfer_buffer.data(),
+                    .complete_cb = control_xfer_complete_cb,
+                    .user_data = event.tag,
+                };
+                // TODO can't actually enqueue multiple until they're complete
+                if (!tuh_control_xfer(&xfer)) {
+                    log_error("tuh_control_xfer failed");
+                }
             }
         }
     }
@@ -85,11 +111,56 @@ void InitUsbHost() {
                 &task_handle);
     vTaskCoreAffinitySet(task_handle, 1 << 1);
 
-    tx_buffer = xStreamBufferCreate(kTxBufferLen, 0);
+    control_xfer_queue = xQueueCreate(kXferQueueLen, sizeof(ControlXfer));
 }
 
-void UsbWriteHandheldData(uint8_t* data, size_t len) {
-    xStreamBufferSend(tx_buffer, data, len, portMAX_DELAY);
+void UsbHandheldControlOut(uint8_t request, uint16_t value, uintptr_t tag, std::span<uint8_t> data) {
+    if (data.size() > kXferBufferLen) {
+        log_error("Control Out too large");
+        return;
+    }
+
+    ControlXfer xfer = {};
+    xfer.tag = tag;
+    xfer.setup = {
+        .bmRequestType_bit =
+            {
+                .recipient = TUSB_REQ_RCPT_DEVICE,
+                .type = TUSB_REQ_TYPE_VENDOR,
+                .direction = TUSB_DIR_OUT,
+            },
+        .bRequest = request,
+        .wValue = value,
+        .wIndex = 0,
+        .wLength = (uint16_t)data.size(),
+    };
+    memcpy(xfer.buffer.data(), data.data(), data.size());
+
+    auto result = xQueueSendToBack(control_xfer_queue, &xfer, /* xTicksToWait= */ 0);
+    if (result != pdPASS) {
+        log_error("Failed to post Control Out");
+    }
+}
+
+void UsbHandheldControlIn(uint8_t request, uint16_t value, uintptr_t tag, uint16_t length) {
+    ControlXfer xfer = {};
+    xfer.tag = tag;
+    xfer.setup = {
+        .bmRequestType_bit =
+            {
+                .recipient = TUSB_REQ_RCPT_DEVICE,
+                .type = TUSB_REQ_TYPE_VENDOR,
+                .direction = TUSB_DIR_IN,
+            },
+        .bRequest = request,
+        .wValue = value,
+        .wIndex = 0,
+        .wLength = length,
+    };
+    auto result = xQueueSendToBack(control_xfer_queue, &xfer, /* xTicksToWait= */ 0);
+    if (result != pdPASS) {
+        log_error("Failed to post Control In");
+    }
 }
 
 void tuh_mount_cb(uint8_t dev_addr) {
@@ -116,19 +187,9 @@ void tuh_cdc_rx_cb(uint8_t idx) {
     for (uint32_t i = 0; i < available; i++) {
         uint8_t data = buffer[i];
 
-        // End of line, pass it to event loop.
+        // End of line, print it.
         if (data == '\n' && state.rx_buffer_len > 0) {
-            if (state.rx_buffer[0] == '<') {
-                // Send just the command response.
-                Event event{};
-                event.type = EventType::kHandheldRxData;
-                event.handheld_rx_data.len = state.rx_buffer_len - 1;
-                memcpy(event.handheld_rx_data.data, state.rx_buffer + 1, state.rx_buffer_len - 1);
-                PostEvent(event);
-            } else {
-                // Not a command response (log?), print it.
-                printf("| %.*s\n", state.rx_buffer_len, state.rx_buffer);
-            }
+            printf("| %.*s\n", state.rx_buffer_len, state.rx_buffer);
             state.rx_buffer_len = 0;
             continue;
         }
@@ -200,4 +261,15 @@ void tuh_cdc_umount_cb(uint8_t idx) {
 usbh_class_driver_t const* usbh_app_driver_get_cb(uint8_t* driver_count) {
     *driver_count = 1;
     return &usbh_xinput_driver;
+}
+
+static void control_xfer_complete_cb(tuh_xfer_t* xfer) {
+    Event event{};
+    event.type = EventType::kHandheldXferComplete;
+    event.handheld_xfer.request = xfer->setup->bRequest;
+    event.handheld_xfer.success = xfer->result == XFER_RESULT_SUCCESS;
+    event.handheld_xfer.length = MIN(xfer->actual_len, event.handheld_xfer.data.size());
+    event.handheld_xfer.tag = xfer->user_data;
+    memcpy(event.handheld_xfer.data.data(), xfer->buffer, event.handheld_xfer.length);
+    PostEvent(event);
 }

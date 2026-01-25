@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
+#include <span>
 #include <string_view>
 #include <vector>
 
@@ -21,11 +23,17 @@
 
 namespace {
 
+constexpr uint8_t kRequestGetInfo = 0;
+constexpr uint8_t kRequestDockBegin = 3;
+constexpr uint8_t kRequestGamepadConnect = 4;
+constexpr uint8_t kRequestGamepadDisconnect = 5;
+constexpr uint8_t kRequestGamepadData = 6;
+
 enum class State {
     /// Handheld is not connected
     Idle,
     /// Sent info request, waiting for response.
-    WaitForHwInfo,
+    WaitForGetInfo,
     /// Send dock begin, waiting for response.
     WaitForDockBegin,
     /// Docking is active.
@@ -47,31 +55,59 @@ static TimerHandle_t ping_interval_timer;
 static TimerHandle_t ping_timeout_timer;
 
 void WriteGamepadConnected(const Gamepad& gamepad) {
-    char buffer[64];
-    // >gamepad_connect,slot,name,unique_id
-    int len = snprintf(buffer, sizeof(buffer), ">gamepad_connect,%lu,%s,%s\n", gamepad.id,
-                       uni_gamepad_get_model_name(gamepad.gamepad_type), gamepad.device_id);
-    UsbWriteHandheldData((uint8_t*)buffer, MIN(len, sizeof(buffer) - 1));
+    // 4 byte: slot
+    // 4 byte: reserved
+    // 8 byte: gamepad device ID
+    // 32 byte: model name (\0 terminated)
+    alignas(4) std::array<uint8_t, 48> buffer{};
+    *((uint32_t*)&buffer[0]) = gamepad.id;
+    *((uint32_t*)&buffer[4]) = 0;
+    // todo gamepad device ID
+    const char* model = uni_gamepad_get_model_name(gamepad.gamepad_type);
+    strncpy((char*)&buffer[16], model, 31);
+    UsbHandheldControlOut(kRequestGamepadConnect, 0, 0, buffer);
 }
 
-void HandleHandheldResponse(const std::string_view response) {
+void HandleHandheldXfer(bool success, uint8_t request, uintptr_t tag, std::span<const uint8_t> data) {
+    (void)tag;
     switch (state) {
-        case State::WaitForHwInfo: {
-            if (response.starts_with("ok")) {
-                log_info("Got hw_info: %.*s", response.size(), response.data());
-                char buffer[64];
-                int len = snprintf(buffer, sizeof(buffer), ">dock_begin,%08lX,%08lX,%s\n", GetSerialNumber(),
-                                   GetHardwareVersion().value(), DOCK_SW_VERSION);
-                UsbWriteHandheldData((uint8_t*)buffer, MIN(len, sizeof(buffer) - 1));
+        case State::WaitForGetInfo: {
+            if (request != kRequestGetInfo) {
+                break;
+            }
+            if (success && data.size() >= 16) {
+                // 0.. 4: reserved
+                // 4.. 8: serial
+                // 8.. 12: hw version
+                // 12..16: fw version
+                // Assumes little endian system
+                uint32_t serial = *(uint32_t*)(&data[4]);
+                uint32_t hw_version = *(uint32_t*)(&data[8]);
+                uint32_t fw_version = *(uint32_t*)(&data[12]);
+                log_info("Handheld Info:");
+                log_info("  Serial: %08lX", serial);
+                log_info("  HW:     %08lX", hw_version);
+                log_info("  FW:     %08lX", fw_version);
+
+                std::array<uint32_t, 4> buffer{};
+                buffer[0] = 0;
+                buffer[1] = GetSerialNumber();
+                buffer[2] = GetHardwareVersion().value();
+                buffer[3] =
+                    (DOCK_FW_VERSION_MAJOR << 24) | (DOCK_FW_VERSION_MINOR << 16) | (DOCK_FW_VERSION_PATCH << 8);
+                UsbHandheldControlOut(kRequestDockBegin, 0, 0, std::span((uint8_t*)buffer.data(), sizeof(buffer)));
                 state = State::WaitForDockBegin;
             } else {
-                log_error("hw_info error");
+                log_error("get_info error");
                 state = State::Error;
             }
             break;
         }
         case State::WaitForDockBegin: {
-            if (response.starts_with("ok")) {
+            if (request != kRequestDockBegin) {
+                break;
+            }
+            if (success) {
                 log_info("Dock begin success");
                 // Send all already-connected gamepads
                 for (const Gamepad& gamepad : gamepads) {
@@ -89,7 +125,7 @@ void HandleHandheldResponse(const std::string_view response) {
             break;
         }
         case State::Active: {
-            if (response.starts_with("ok")) {
+            if (success) {
                 xTimerReset(ping_timeout_timer, portMAX_DELAY);
             }
         }
@@ -107,9 +143,8 @@ void HandleEvent(const Event& event) {
             }
 
             log_info("Handheld mount");
-            char command[] = "\n>get_hwinfo\n";
-            UsbWriteHandheldData((uint8_t*)command, sizeof(command) - 1);
-            state = State::WaitForHwInfo;
+            UsbHandheldControlIn(kRequestGetInfo, /* value= */ 0, /* tag= */ 0, /* length= */ 16);
+            state = State::WaitForGetInfo;
             break;
         }
 
@@ -121,9 +156,9 @@ void HandleEvent(const Event& event) {
             xTimerStop(ping_timeout_timer, portMAX_DELAY);
             break;
 
-        case EventType::kHandheldRxData: {
-            const auto& data = event.handheld_rx_data;
-            HandleHandheldResponse(std::string_view((char*)&data.data, data.len));
+        case EventType::kHandheldXferComplete: {
+            const auto& data = event.handheld_xfer;
+            HandleHandheldXfer(data.success, data.request, data.tag, std::span(data.data).first(data.length));
             break;
         }
 
@@ -131,8 +166,9 @@ void HandleEvent(const Event& event) {
             if (state != State::Active) {
                 break;
             }
-            char command[] = "\n>get_hwinfo\n";
-            UsbWriteHandheldData((uint8_t*)command, sizeof(command) - 1);
+            // TODO: re-add ping
+            // char command[] = "\n>get_hwinfo\n";
+            // UsbWriteHandheldData((uint8_t*)command, sizeof(command) - 1);
             // TODO: perhaps this should only happen if we're getting close to the timeout
             // (e.g. treat it as a watchdog)
             xTimerReset(ping_interval_timer, portMAX_DELAY);
@@ -165,9 +201,10 @@ void HandleEvent(const Event& event) {
             gamepads.erase(entry_it);
 
             if (state == State::Active) {
-                char buffer[64];
-                int len = sprintf(buffer, ">gamepad_disconnect,%lu\n", data.gamepad_id);
-                UsbWriteHandheldData((uint8_t*)buffer, len);
+                std::array<uint32_t, 1> buffer{};
+                buffer[0] = data.gamepad_id;
+                UsbHandheldControlOut(kRequestGamepadDisconnect, 0, 0,
+                                      std::span((uint8_t*)buffer.data(), sizeof(buffer)));
             }
             break;
         }
@@ -177,17 +214,14 @@ void HandleEvent(const Event& event) {
             // log_info("Gamepad: [%05lX] L(%6d %6d) R(%6d %6d) (Lz=%5u Rz=%5u)", gp.buttons, gp.lx, gp.ly, gp.rx,
             // gp.ry, gp.lz, gp.rz);
             if (state == State::Active) {
+                // 4 byte: slot
+                // 16 byte: gamepad data
                 // Requires little endian
-                char buffer[64];
-                char* x = buffer;
 
-                x += sprintf(x, ">gamepad_data,%lu,", event.gamepad_data.gamepad_id);
-                for (size_t i = 0; i < sizeof(gp); i++) {
-                    x += sprintf(x, "%02x", ((uint8_t*)(&gp))[i]);
-                }
-                x += sprintf(x, "\n");
-                int len = x - buffer;
-                UsbWriteHandheldData((uint8_t*)buffer, len);
+                alignas(4) std::array<uint8_t, 20> buffer{};
+                *((uint32_t*)&buffer[0]) = event.gamepad_data.gamepad_id;
+                memcpy(&buffer[4], &gp, 16);
+                UsbHandheldControlOut(kRequestGamepadData, 0, 0, buffer);
             }
             break;
         }
@@ -232,10 +266,11 @@ void HandheldPingTask(TimerHandle_t) {
 }
 
 void HandheldPingTimeoutTask(TimerHandle_t) {
-    log_warn("Handheld timed out");
-    Event event{};
-    event.type = EventType::kHandheldUnmount;
-    PostEvent(event);
+    // TODO: re-add time out
+    // log_warn("Handheld timed out");
+    // Event event{};
+    // event.type = EventType::kHandheldUnmount;
+    // PostEvent(event);
 }
 
 }  // namespace
@@ -259,7 +294,7 @@ void PostEvent(const Event& event) {
     auto result = xQueueSendToBack(event_queue, &event,
                                    /* xTicksToWait= */ 0);
     if (result != pdPASS) {
-        log_error("Failed to post event");
+        log_error("Failed to post event=%u", event.type);
     }
 }
 

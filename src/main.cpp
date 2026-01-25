@@ -32,7 +32,7 @@ int main() {
     auto hw_version = GetHardwareVersion();
     printf("hardware version: %u.%u.%u.%u\n", hw_version.product, hw_version.major, hw_version.minor,
            hw_version.variant);
-    printf("software version: %s\n", DOCK_SW_VERSION);
+    printf("firmware version: %u.%u.%u\n", DOCK_FW_VERSION_MAJOR, DOCK_FW_VERSION_MINOR, DOCK_FW_VERSION_PATCH);
     printf("serial number: %08lX\n", GetSerialNumber());
 
     InitLed();
