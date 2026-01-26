@@ -74,8 +74,7 @@ void usb_device_task(void*) {
     bool is_connected = false;
 
     while (true) {
-        xSemaphoreTake(mutex, portMAX_DELAY);
-        tud_task_ext(0, false);
+        tud_task_ext(1, false);
 
         if (tud_cdc_connected()) {
             if (!is_connected) {
@@ -90,6 +89,8 @@ void usb_device_task(void*) {
         if (is_connected && time_us_64() > connection_time + 50000) {
             // Try flushing the buffer as much as possible
             // TODO write a while chunk, not byte-by-byte
+
+            xSemaphoreTake(mutex, portMAX_DELAY);
             while (tx_buffer_count > 0) {
                 if (tud_cdc_write_available() > 0) {
                     tud_cdc_write(tx_buffer.data() + tx_buffer_head, 1);
@@ -102,11 +103,9 @@ void usb_device_task(void*) {
                     break;
                 }
             }
+            xSemaphoreGive(mutex);
             tud_cdc_write_flush();
         }
-
-        xSemaphoreGive(mutex);
-        vTaskDelay(5);
     }
 }
 
