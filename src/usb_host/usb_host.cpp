@@ -121,6 +121,20 @@ void InitUsbHost() {
     control_xfer_queue = xQueueCreate(kXferQueueLen, sizeof(ControlXfer));
 }
 
+/// Return the port that the device is plugged into, or 0 if not plugged into the root hub.
+static uint8_t GetDeviceHubPort(uint8_t device_address) {
+    hcd_devtree_info_t devtree_info{};
+    hcd_devtree_get_info(device_address, &devtree_info);
+    uint8_t port = devtree_info.hub_port;
+
+    // Now, see if the hub that the device is part of is itself part of the root hub.
+    hcd_devtree_get_info(devtree_info.hub_addr, &devtree_info);
+    if (devtree_info.hub_addr != 0) {
+        return 0;
+    }
+    return port;
+}
+
 void UsbHandheldControlOut(uint8_t request, uint16_t value, uintptr_t tag, std::span<uint8_t> data) {
     if (data.size() > kXferBufferLen) {
         log_error("Control Out too large");
@@ -174,7 +188,8 @@ void tuh_mount_cb(uint8_t dev_addr) {
     uint16_t vid = 0;
     uint16_t pid = 0;
     tuh_vid_pid_get(dev_addr, &vid, &pid);
-    printf("Mounted USB device address=%d vid=%x pid=%x\n", dev_addr, vid, pid);
+    uint8_t port = GetDeviceHubPort(dev_addr);
+    printf("Mounted USB device: port=%d addr=%d [%04X:%04X]\n", port, dev_addr, vid, pid);
 }
 
 void tuh_umount_cb(uint8_t dev_addr) {
@@ -206,20 +221,6 @@ void tuh_cdc_rx_cb(uint8_t idx) {
             state.rx_buffer_len++;
         }
     }
-}
-
-/// Return the port that the device is plugged into, or 0 if not plugged into the root hub.
-static uint8_t GetDeviceHubPort(uint8_t device_address) {
-    hcd_devtree_info_t devtree_info{};
-    hcd_devtree_get_info(device_address, &devtree_info);
-    uint8_t port = devtree_info.hub_port;
-
-    // Now, see if the hub that the device is part of is itself part of the root hub.
-    hcd_devtree_get_info(devtree_info.hub_addr, &devtree_info);
-    if (devtree_info.hub_addr != 0) {
-        return 0;
-    }
-    return port;
 }
 
 void tuh_cdc_mount_cb(uint8_t idx) {
