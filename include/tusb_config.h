@@ -150,6 +150,8 @@
 // CDC Endpoint transfer buffer size, more is faster
 #define CFG_TUD_CDC_EP_BUFSIZE   64
 
+#define CFG_TUD_VENDOR 1
+
 #ifdef __cplusplus
  }
 #endif

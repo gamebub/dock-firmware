@@ -61,7 +61,6 @@ add_executable(dock-firmware
     ${SRC}/hwinfo/hwinfo.cpp
     ${SRC}/usb_device/usb_device.cpp
     ${SRC}/usb_device/descriptors.c
-    ${SRC}/usb_device/reset_interface.c
     ${SRC}/usb_host/hid.cpp
     ${SRC}/usb_host/usb_host.cpp
     ${SRC}/usb_host/xinput.cpp
@@ -154,7 +153,6 @@ target_link_libraries(dock-firmware
     pico_cyw43_arch_sys_freertos
     pico_btstack_classic
     pico_btstack_cyw43
-    pico_usb_reset_interface_headers
     bluepad32
     pico_pio_usb
     FreeRTOS-Kernel

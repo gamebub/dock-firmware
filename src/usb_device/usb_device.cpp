@@ -18,6 +18,8 @@ constexpr size_t kStackSize = 8 * 1024;
 constexpr size_t kStdoutTimeoutUs = 500000;
 constexpr size_t kBufferCapacity = 2048;
 
+constexpr size_t kControlInterface = 2;  // hard-coded, from descriptors
+
 constexpr size_t kRequestGetInfo = 0;
 constexpr size_t kRequestReboot = 1;
 
@@ -143,10 +145,13 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, const tusb_contro
         return true;
     }
 
+    if (request->bmRequestType_bit.recipient != TUSB_REQ_RCPT_INTERFACE || request->wIndex != kControlInterface) {
+        return false;
+    }
+
     switch (request->bRequest) {
         case kRequestGetInfo: {
-            if (request->bmRequestType_bit.direction == TUSB_DIR_IN &&
-                request->bmRequestType_bit.recipient == TUSB_REQ_RCPT_DEVICE) {
+            if (request->bmRequestType_bit.direction == TUSB_DIR_IN) {
                 ((uint32_t*)buffer)[0] = 0;
                 ((uint32_t*)buffer)[1] = GetSerialNumber();
                 ((uint32_t*)buffer)[2] = GetHardwareVersion().value();
@@ -157,8 +162,7 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, const tusb_contro
             return false;
         }
         case kRequestReboot: {
-            if (request->bmRequestType_bit.direction == TUSB_DIR_OUT &&
-                request->bmRequestType_bit.recipient == TUSB_REQ_RCPT_DEVICE) {
+            if (request->bmRequestType_bit.direction == TUSB_DIR_OUT) {
                 if (request->wValue == 1) {
                     // Regular reboot.
                     rom_reboot(BOOT_TYPE_NORMAL, /* delay_ms */ 100, 0, 0);
