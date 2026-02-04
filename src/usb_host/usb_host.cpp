@@ -146,13 +146,13 @@ void UsbHandheldControlOut(uint8_t request, uint16_t value, uintptr_t tag, std::
     xfer.setup = {
         .bmRequestType_bit =
             {
-                .recipient = TUSB_REQ_RCPT_DEVICE,
+                .recipient = TUSB_REQ_RCPT_INTERFACE,
                 .type = TUSB_REQ_TYPE_VENDOR,
                 .direction = TUSB_DIR_OUT,
             },
         .bRequest = request,
         .wValue = value,
-        .wIndex = 0,
+        .wIndex = 0,  // TODO: read descriptor to find correct interface index
         .wLength = (uint16_t)data.size(),
     };
     memcpy(xfer.buffer.data(), data.data(), data.size());
@@ -169,7 +169,7 @@ void UsbHandheldControlIn(uint8_t request, uint16_t value, uintptr_t tag, uint16
     xfer.setup = {
         .bmRequestType_bit =
             {
-                .recipient = TUSB_REQ_RCPT_DEVICE,
+                .recipient = TUSB_REQ_RCPT_INTERFACE,
                 .type = TUSB_REQ_TYPE_VENDOR,
                 .direction = TUSB_DIR_IN,
             },
