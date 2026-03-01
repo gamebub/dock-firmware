@@ -6,6 +6,7 @@
 #include "FreeRTOS.h"
 #include "git_commit.h"
 #include "hwinfo/hwinfo.h"
+#include "led/led.h"
 #include "pico/bootrom.h"
 #include "pico/stdio.h"
 #include "pico/stdio/driver.h"
@@ -172,7 +173,7 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, const tusb_contro
                     return true;
                 } else if (request->wValue == 2) {
                     // BOOTSEL reboot.
-                    // TODO: set LED color to something?
+                    SetLedState(LedState::kDfu);
                     rom_reboot(BOOT_TYPE_BOOTSEL, /* delay_ms */ 100, /* DISABLE_MSD_INTERFACE */ 0x01, 0);
                     tud_control_status(rhport, request);
                     return true;

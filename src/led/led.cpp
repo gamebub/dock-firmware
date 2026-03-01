@@ -32,6 +32,15 @@ constexpr float kLedGamma = 2.2f;
 // State to behavior mapping, should be sorted from highest to lowest priority.
 constexpr auto kStateMap = std::to_array<StateEntry>({
     StateEntry{
+        .state = LedState::kDfu,
+        .behavior =
+            LedBehavior{
+                .pattern = LedPattern::kSolid,
+                .color = LedColor(128, 0, 128),
+            },
+        .priority = 4,
+    },
+    StateEntry{
         .state = LedState::kBluetoothPairing,
         .behavior =
             LedBehavior{
@@ -46,7 +55,7 @@ constexpr auto kStateMap = std::to_array<StateEntry>({
         .behavior =
             LedBehavior{
                 .pattern = LedPattern::kSolid,
-                .color = LedColor(150, 0, 200),
+                .color = LedColor(150, 150, 150),
             },
         .priority = 2,
     },

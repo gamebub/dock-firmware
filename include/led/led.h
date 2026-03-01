@@ -32,6 +32,7 @@ enum class LedState : uint32_t {
     kStandby,
     kBluetoothPairing,
     kDockActive,
+    kDfu,
 
     kCount,
 };
