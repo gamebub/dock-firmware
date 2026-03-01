@@ -3,6 +3,7 @@
 #include "FreeRTOS.h"
 #include "hardware/clocks.h"
 #include "hardware/pio.h"
+#include "pico/binary_info.h"
 #include "pico/multicore.h"
 #include "pico/stdlib.h"
 #include "task.h"
@@ -10,11 +11,14 @@
 //
 #include "bluetooth/bluetooth.h"
 #include "core/core.h"
+#include "git_commit.h"
 #include "gpio/gpio.h"
 #include "hwinfo/hwinfo.h"
 #include "led/led.h"
 #include "usb_device/usb_device.h"
 #include "usb_host/usb_host.h"
+
+bi_decl(bi_program_description(GIT_HASH_STRING));
 
 static inline void put_pixel(PIO pio, uint sm, uint32_t pixel_grb) {
     pio_sm_put_blocking(pio, sm, pixel_grb << 8u);

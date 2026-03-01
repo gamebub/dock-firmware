@@ -1,0 +1,7 @@
+#pragma once
+
+#include <stdint.h>
+
+static const uint8_t GIT_HASH_BYTES[] = { @BYTE_HASH@ };
+
+#define GIT_HASH_STRING "@STRING_HASH@"

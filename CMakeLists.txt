@@ -69,19 +69,23 @@ add_executable(dock-firmware
     ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/hcd_pio_usb.c
 )
 
+set(VERSION_MAJOR 0)
+set(VERSION_MINOR 1)
+set(VERSION_PATCH 2)
+
 pico_set_program_name(dock-firmware "dock-firmware")
-pico_set_program_version(dock-firmware "0.1")
+pico_set_program_version(dock-firmware "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 
 # Modify the below lines to enable/disable output over UART/USB
 pico_enable_stdio_uart(dock-firmware 1)
 pico_enable_stdio_usb(dock-firmware 0)
 target_compile_definitions(dock-firmware PRIVATE
-  DOCK_FW_VERSION_MAJOR=0
-  DOCK_FW_VERSION_MINOR=1
-  DOCK_FW_VERSION_PATCH=0
-
   PICO_RP2350A=1
   PICO_RP2350_A2_SUPPORTED=1
+
+  "DOCK_FW_VERSION_MAJOR=${VERSION_MAJOR}"
+  "DOCK_FW_VERSION_MINOR=${VERSION_MINOR}"
+  "DOCK_FW_VERSION_PATCH=${VERSION_PATCH}"
 
   PICO_DEFAULT_UART=0
   PICO_DEFAULT_UART_TX_PIN=16
@@ -181,3 +185,12 @@ target_compile_definitions(bluepad32 PUBLIC
 pico_add_extra_outputs(dock-firmware)
 
 pico_generate_pio_header(dock-firmware ${CMAKE_CURRENT_LIST_DIR}/src/led/ws2812.pio OUTPUT_DIR ${CMAKE_BINARY_DIR}/generated)
+
+# Commit hash
+add_custom_target(UpdateGitCommit
+    COMMAND ${CMAKE_COMMAND} -D INCLUDE=${INCLUDE}
+                             -P "${CMAKE_SOURCE_DIR}/GetGitCommit.cmake"
+    BYPRODUCTS "${CMAKE_BINARY_DIR}/generated/version.h"
+)
+add_dependencies(dock-firmware UpdateGitCommit)
+target_include_directories(dock-firmware PRIVATE "${CMAKE_BINARY_DIR}/generated")

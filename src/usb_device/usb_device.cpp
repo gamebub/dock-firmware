@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "FreeRTOS.h"
+#include "git_commit.h"
 #include "hwinfo/hwinfo.h"
 #include "pico/bootrom.h"
 #include "pico/stdio.h"
@@ -156,7 +157,8 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, const tusb_contro
                 ((uint32_t*)buffer)[1] = GetSerialNumber();
                 ((uint32_t*)buffer)[2] = GetHardwareVersion().value();
                 ((uint32_t*)buffer)[3] = GetFirmwareVersion().value();
-                tud_control_xfer(rhport, request, &buffer, 16);
+                memcpy(&buffer[16], GIT_HASH_BYTES, 8);
+                tud_control_xfer(rhport, request, &buffer, 24);
                 return true;
             }
             return false;
