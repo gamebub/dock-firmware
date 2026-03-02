@@ -1,12 +1,9 @@
+use crate::sys;
 use alloc::string::String;
 use core::fmt::Write;
 use freertos_rust::{Duration, FreeRtosUtils, Mutex};
 use log::{Level, LevelFilter, Metadata, Record};
 use static_cell::StaticCell;
-
-unsafe extern "C" {
-    unsafe fn puts(str: *const u8);
-}
 
 struct StdioLogger {
     buffer: Mutex<String>,
@@ -36,7 +33,7 @@ impl log::Log for StdioLogger {
         )
         .unwrap();
         unsafe {
-            puts(buffer.as_ptr());
+            sys::puts(buffer.as_ptr());
         }
     }
 

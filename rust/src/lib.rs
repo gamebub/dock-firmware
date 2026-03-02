@@ -3,6 +3,7 @@
 
 mod api;
 mod logger;
+mod sys;
 
 extern crate alloc;
 
@@ -37,5 +38,8 @@ pub extern "C" fn rust_init() {
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
-    loop {}
+    // TODO: print the message somehow
+    unsafe {
+        sys::panic("Panic!\0".as_ptr());
+    }
 }
