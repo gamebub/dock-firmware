@@ -20,3 +20,5 @@ opt-level = "z"
 
 [dependencies]
 freertos-rust = "0.2.0"
+log = "0.4.29"
+static_cell = "2.1.1"

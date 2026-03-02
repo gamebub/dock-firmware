@@ -1,35 +1,36 @@
 #![no_std]
 #![no_main]
 
-use freertos_rust::{CurrentTask, Duration, FreeRtosAllocator, Task};
+mod api;
+mod logger;
+
+extern crate alloc;
 
 #[global_allocator]
 static GLOBAL: FreeRtosAllocator = FreeRtosAllocator;
 
-mod api;
+use freertos_rust::{CurrentTask, Duration, FreeRtosAllocator, Task};
 
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_add(left: u32, right: u32) -> u32 {
     left + right
 }
 
-unsafe extern "C" {
-    unsafe fn puts(str: *const u8);
-}
-
 fn rust_printy(_task: Task) {
-    unsafe {
-        puts("rust task!\0".as_ptr());
-    }
+    log::info!("Rust task!");
 
+    let mut i = 0;
     loop {
         CurrentTask::delay(Duration::ms(500));
-        unsafe { puts("rust!\0".as_ptr()) };
+        log::info!("hello from rust: {}", i);
+        i += 1;
     }
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_init() {
+    logger::init();
+
     Task::new().name("rust printy").start(rust_printy).unwrap();
 }
 
