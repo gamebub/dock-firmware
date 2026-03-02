@@ -39,6 +39,8 @@ set(PICO_CYW43_SUPPORTED 1)
 set(TINYUSB_OPT_OS OPT_OS_FREERTOS)
 set(TINYUSB_DEBUG_LEVEL 1)
 
+set(Rust_CARGO_TARGET thumbv8m.main-none-eabi)
+
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
@@ -49,10 +51,20 @@ pico_sdk_init()
 
 include(FreeRTOS_Kernel_import.cmake)
 
+# Setup Corrosion
+include(FetchContent)
+FetchContent_Declare(
+    Corrosion
+    GIT_REPOSITORY https://github.com/corrosion-rs/corrosion.git
+    GIT_TAG v0.6
+)
+FetchContent_MakeAvailable(Corrosion)
+
 # Add executable. Default name is the project name, version 0.1
 
 add_executable(dock-firmware
     ${SRC}/main.cpp
+    ${SRC}/freertos_rust_shim.c
     ${SRC}/bluetooth/bluetooth.cpp
     ${SRC}/core/core.cpp
     ${SRC}/handheld/handheld.cpp
@@ -194,3 +206,10 @@ add_custom_target(UpdateGitCommit
 )
 add_dependencies(dock-firmware UpdateGitCommit)
 target_include_directories(dock-firmware PRIVATE "${CMAKE_BINARY_DIR}/generated")
+
+# Add Rust build
+corrosion_import_crate(
+    MANIFEST_PATH "${CMAKE_CURRENT_LIST_DIR}/rust/Cargo.toml"
+    NO_STD
+)
+target_link_libraries(dock-firmware dock_rs)

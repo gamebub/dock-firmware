@@ -1,0 +1,22 @@
+[package]
+name = "dock_rs"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["staticlib"]
+
+[profile.release]
+panic = "abort"
+debug = 2
+lto = true
+opt-level = 'z'
+
+[profile.dev]
+panic = "abort"
+debug = 2
+lto = true
+opt-level = "z"
+
+[dependencies]
+freertos-rust = "0.2.0"
