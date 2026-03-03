@@ -2,6 +2,7 @@ use crate::sys;
 
 pub struct HandheldXferResult {
     pub request: u8,
+    #[allow(unused)]
     pub tag: usize,
     data: [u8; 64],
     success: bool,
