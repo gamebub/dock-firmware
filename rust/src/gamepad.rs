@@ -41,11 +41,11 @@ pub struct GamepadData {
     lz: u16,
     rx: i16,
     ry: i16,
-    rz: i16,
+    rz: u16,
 }
 
-#[derive(Copy, Clone, Debug)]
-pub struct GamepadId(u32);
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct GamepadId(pub u32);
 
 impl GamepadId {
     pub fn allocate() -> Self {

@@ -4,6 +4,7 @@
 #include "core/core.h"
 #include "pico/cyw43_arch.h"
 #include "priorities.h"
+#include "rust_api.h"
 #include "task.h"
 #include "uni.h"
 
@@ -75,27 +76,25 @@ static void platform_on_device_connected(uni_hid_device_t* d) {
 static void platform_on_device_disconnected(uni_hid_device_t* d) {
     logi("bluetooth: device disconnected: %p\n", d);
 
-    Event event;
-    event.type = EventType::kGamepadDisconnected;
-    event.gamepad_disconnected.gamepad_id = GetGamepadInfo(d)->id;
-    PostEvent(event);
+    rust_event_gamepad_disconnected(GetGamepadInfo(d)->id);
 }
 
 static uni_error_t platform_on_device_ready(uni_hid_device_t* d) {
     logi("my_platform: device ready: %p\n", d);
 
-    uint32_t gamepad_id = AssignGamepadId();
+    uint32_t gamepad_id = rust_gamepad_allocate_id();
     GetGamepadInfo(d)->id = gamepad_id;
 
-    Event event;
-    event.type = EventType::kGamepadConnected;
-    event.gamepad_connected.gamepad.id = gamepad_id;
-    event.gamepad_connected.gamepad.gamepad_type = d->controller_type;
-    event.gamepad_connected.gamepad.wired = false;
-    memset(event.gamepad_connected.gamepad.device_id, 0, sizeof(event.gamepad_connected.gamepad.device_id));
-    memcpy(event.gamepad_connected.gamepad.device_id, d->conn.btaddr, sizeof(bd_addr_t));
-    // TODO: more gamepad info
-    PostEvent(event);
+    uint8_t device_id[8];
+    memset(device_id, 0, sizeof(device_id));
+    memcpy(device_id, d->conn.btaddr, sizeof(bd_addr_t));
+
+    rust_event_gamepad_connected(
+        gamepad_id,
+        (uint32_t)d->controller_type,
+        device_id,
+        false
+    );
 
     // Can reject the connection by returning an error.
     return UNI_ERROR_SUCCESS;
@@ -105,10 +104,7 @@ static void platform_on_controller_data(uni_hid_device_t* d, uni_controller_t* c
     if (ctl->klass == UNI_CONTROLLER_CLASS_GAMEPAD) {
         uni_gamepad_t* gp = &ctl->gamepad;
 
-        Event event;
-        event.type = EventType::kGamepadData;
-        event.gamepad_data.gamepad_id = GetGamepadInfo(d)->id;
-        GamepadData& data = event.gamepad_data.data;
+        GamepadData data;
         data.buttons = ((gp->buttons & 0b1111) << 0) | ((gp->dpad & 0b1111) << 4) | ((gp->misc_buttons & 0b1111) << 8) |
                        (((gp->buttons & 0b1111110000) >> 4) << 12);
         data.lx = (int16_t)(gp->axis_x << 6);
@@ -117,7 +113,10 @@ static void platform_on_controller_data(uni_hid_device_t* d, uni_controller_t* c
         data.rx = (int16_t)(gp->axis_rx << 6);
         data.ry = (int16_t)(gp->axis_ry << 6);
         data.rz = (uint16_t)(gp->throttle << 6);
-        PostEvent(event);
+        rust_event_gamepad_data(
+            GetGamepadInfo(d)->id,
+            data
+        );
 
         static size_t num_events = 0;
         static TickType_t events_since = 0;

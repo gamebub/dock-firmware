@@ -22,7 +22,7 @@ pub enum Message {
     /// A gamepad has disconnected
     GamepadDisconnected(GamepadId),
     /// New gamepad data is received
-    GamepadData(GamepadData),
+    GamepadData(GamepadId, GamepadData),
 
     ButtonShortPress,
     ButtonLongPress,
@@ -44,6 +44,9 @@ impl Engine {
         match message {
             Message::GamepadConnected(g) => {
                 log::info!("Gamepad connected: id={}", g.id.as_u32());
+                self.bluetooth_pairing = false;
+                unsafe { sys::UnsetLedState(sys::LED_STATE_BLUETOOTH_PAIRING) };
+                unsafe { sys::BluetoothEnablePairing(false) };
             }
             Message::GamepadDisconnected(id) => {
                 log::info!("Gamepad disconnected: id={}", id.as_u32());
