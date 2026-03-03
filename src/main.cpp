@@ -22,8 +22,6 @@
 bi_decl(bi_program_description(GIT_HASH_STRING));
 
 extern "C" {
-uint32_t rust_add(uint32_t a, uint32_t b);
-
 void rust_init(void);
 }
 
@@ -32,14 +30,9 @@ int main()
     stdio_init_all();
     InitUsbDevice();
 
-    printf("Game Bub Dock\n");
-    auto hw_version = GetHardwareVersion();
-    printf("hardware version: %u.%u.%u.%u\n", hw_version.product, hw_version.major, hw_version.minor,
-        hw_version.variant);
-    printf("firmware version: %u.%u.%u\n", DOCK_FW_VERSION_MAJOR, DOCK_FW_VERSION_MINOR, DOCK_FW_VERSION_PATCH);
-    printf("serial number: %08lX\n", GetSerialNumber());
+    rust_init();
 
-    printf("Rust add: %lu\n", rust_add(10, 17));
+    printf("firmware version: %u.%u.%u\n", DOCK_FW_VERSION_MAJOR, DOCK_FW_VERSION_MINOR, DOCK_FW_VERSION_PATCH);
 
     InitLed();
     InitCore();
@@ -48,8 +41,6 @@ int main()
     InitGpio();
 
     SetLedState(LedState::kStandby);
-
-    rust_init();
 
     // Start FreeRTOS (doesn't return).
     vTaskStartScheduler();

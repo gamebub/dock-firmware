@@ -1,21 +1,17 @@
 #![no_std]
 #![no_main]
 
+extern crate alloc;
+
 mod api;
+mod info;
 mod logger;
 mod sys;
 
-extern crate alloc;
+use freertos_rust::{CurrentTask, Duration, FreeRtosAllocator, Task};
 
 #[global_allocator]
 static GLOBAL: FreeRtosAllocator = FreeRtosAllocator;
-
-use freertos_rust::{CurrentTask, Duration, FreeRtosAllocator, Task};
-
-#[unsafe(no_mangle)]
-pub extern "C" fn rust_add(left: u32, right: u32) -> u32 {
-    left + right
-}
 
 fn rust_printy(_task: Task) {
     log::info!("Rust task!");
@@ -31,6 +27,13 @@ fn rust_printy(_task: Task) {
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_init() {
     logger::init();
+
+    log::info!("Game Bub Dock");
+    log::info!(
+        "Hardware Version: {:08X}",
+        info::HardwareVersion::get().as_u32()
+    );
+    log::info!("Serial Number: {}", info::SerialNumber::get());
 
     Task::new().name("rust printy").start(rust_printy).unwrap();
 }
