@@ -10,6 +10,7 @@ mod info;
 mod led;
 mod logger;
 mod sys;
+mod usb_host;
 mod util;
 
 use freertos_rust::FreeRtosAllocator;

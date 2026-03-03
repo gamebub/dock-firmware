@@ -3,19 +3,18 @@ use static_cell::StaticCell;
 
 use crate::gamepad::{Gamepad, GamepadData, GamepadId};
 use crate::util::InitCell;
-use crate::{led, sys};
+use crate::{led, sys, usb_host};
 
 static QUEUE: InitCell<Queue<Message>> = InitCell::new();
 static ENGINE: StaticCell<Engine> = StaticCell::new();
 
-#[derive(Debug)]
 pub enum Message {
     /// A possibly handheld device has mounted.
     HandheldMount,
     /// The handheld device has disconnected.
     HandheldUnmount,
     /// Handheld control transfer complete
-    HandheldXferComplete,
+    HandheldXferComplete(usb_host::HandheldXferResult),
 
     /// A gamepad has connected
     GamepadConnected(Gamepad),
@@ -42,6 +41,9 @@ impl Engine {
 
     fn handle(&mut self, message: Message) {
         match message {
+            Message::HandheldMount => log::info!("Handheld mount"),
+            Message::HandheldUnmount => log::info!("Handheld unmount"),
+            Message::HandheldXferComplete(_) => (),
             Message::GamepadConnected(g) => {
                 log::info!("Gamepad connected: id={}", g.id.as_u32());
                 if self.bluetooth_pairing {
@@ -52,6 +54,9 @@ impl Engine {
             }
             Message::GamepadDisconnected(id) => {
                 log::info!("Gamepad disconnected: id={}", id.as_u32());
+            }
+            Message::GamepadData(id, data) => {
+                log::info!("Gamepad data: {:?}", data);
             }
             Message::ButtonShortPress => log::info!("Button short press"),
             Message::ButtonLongPress => {
@@ -65,7 +70,6 @@ impl Engine {
                 }
                 unsafe { sys::BluetoothEnablePairing(self.bluetooth_pairing) };
             }
-            _ => log::info!("Unhandled {:?}", message),
         }
     }
 }

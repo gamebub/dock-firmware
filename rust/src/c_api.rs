@@ -1,6 +1,7 @@
 use crate::{
     engine,
     gamepad::{self, Gamepad, GamepadData, GamepadId},
+    usb_host::HandheldXferResult,
 };
 
 #[unsafe(no_mangle)]
@@ -43,4 +44,27 @@ pub extern "C" fn rust_event_gamepad_data(id: u32, data: GamepadData) {
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_event_gamepad_disconnected(id: u32) {
     engine::send(engine::Message::GamepadDisconnected(GamepadId(id)));
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_event_handheld_mount() {
+    engine::send(engine::Message::HandheldMount);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_event_handheld_unmount() {
+    engine::send(engine::Message::HandheldUnmount);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_event_handheld_xfer_complete(
+    request: u8,
+    success: bool,
+    tag: usize,
+    data: *const u8,
+    data_len: usize,
+) {
+    let data = unsafe { core::slice::from_raw_parts(data, data_len) };
+    let result = HandheldXferResult::new(request, tag, success, data);
+    engine::send(engine::Message::HandheldXferComplete(result));
 }

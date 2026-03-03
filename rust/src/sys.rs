@@ -10,4 +10,13 @@ unsafe extern "C" {
 
     pub unsafe fn SetLedState(state: u32);
     pub unsafe fn UnsetLedState(state: u32);
+
+    pub unsafe fn UsbHandheldControlOut2(
+        request: u8,
+        value: u16,
+        tag: usize,
+        data: *const u8,
+        data_len: usize,
+    );
+    pub unsafe fn UsbHandheldControlIn(request: u8, value: u16, tag: usize, length: u16);
 }
