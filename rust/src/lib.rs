@@ -4,25 +4,16 @@
 extern crate alloc;
 
 mod api;
+mod engine;
 mod info;
 mod logger;
 mod sys;
+mod util;
 
 use freertos_rust::{CurrentTask, Duration, FreeRtosAllocator, Task};
 
 #[global_allocator]
 static GLOBAL: FreeRtosAllocator = FreeRtosAllocator;
-
-fn rust_printy(_task: Task) {
-    log::info!("Rust task!");
-
-    let mut i = 0;
-    loop {
-        CurrentTask::delay(Duration::ms(500));
-        log::info!("hello from rust: {}", i);
-        i += 1;
-    }
-}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_init() {
@@ -35,7 +26,16 @@ pub extern "C" fn rust_init() {
     );
     log::info!("Serial Number: {}", info::SerialNumber::get());
 
-    Task::new().name("rust printy").start(rust_printy).unwrap();
+    engine::start_task();
+
+    Task::new()
+        .start(|_| {
+            loop {
+                engine::send(engine::Message::Ping);
+                CurrentTask::delay(Duration::ms(1000));
+            }
+        })
+        .unwrap();
 }
 
 #[cfg(not(test))]
