@@ -8,7 +8,15 @@ static ENGINE: StaticCell<Engine> = StaticCell::new();
 
 #[derive(Debug)]
 pub enum Message {
-    Ping,
+    /// A possibly handheld device has mounted.
+    HandheldMount,
+    /// The handheld device has disconnected.
+    HandheldUnmount,
+    /// Handheld control transfer complete
+    HandheldXferComplete,
+
+    ButtonShortPress,
+    ButtonLongPress,
 }
 
 /// Main state machine
@@ -20,7 +28,10 @@ impl Engine {
     }
 
     fn handle(&mut self, message: Message) {
-        log::info!("{:?}", message);
+        match message {
+            Message::ButtonShortPress => log::info!("Button short press"),
+            _ => log::info!("Unhandled {:?}", message),
+        }
     }
 }
 

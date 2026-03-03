@@ -7,6 +7,7 @@
 #include "hardware/gpio.h"
 #include "pico/stdlib.h"
 #include "timers.h"
+#include "rust_api.h"
 
 namespace {
 constexpr TickType_t kDebounceInterval = pdMS_TO_TICKS(10);
@@ -30,9 +31,7 @@ void ButtonDebounceTask(TimerHandle_t) {
         if (last_button_state && !button_state) {
             TickType_t elapsed = xTaskGetTickCount() - last_button_time;
             if (elapsed <= kShortPressTime) {
-                Event event{};
-                event.type = EventType::kButtonShortPress;
-                PostEvent(event);
+                rust_event_button_short();
             }
         }
 
@@ -44,9 +43,7 @@ void ButtonDebounceTask(TimerHandle_t) {
 void ButtonLongPressTask(TimerHandle_t) {
     if (PollButton()) {
         // Button is still pressed after this time.
-        Event event{};
-        event.type = EventType::kButtonLongPress;
-        PostEvent(event);
+        rust_event_button_long();
     }
 }
 
