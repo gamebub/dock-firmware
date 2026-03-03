@@ -1,7 +1,7 @@
 use freertos_rust::{Duration, Queue, Task};
 use static_cell::StaticCell;
 
-use crate::util::InitCell;
+use crate::{sys, util::InitCell};
 
 static QUEUE: InitCell<Queue<Message>> = InitCell::new();
 static ENGINE: StaticCell<Engine> = StaticCell::new();
@@ -20,16 +20,31 @@ pub enum Message {
 }
 
 /// Main state machine
-struct Engine {}
+struct Engine {
+    bluetooth_pairing: bool,
+}
 
 impl Engine {
     fn new() -> Self {
-        Engine {}
+        Engine {
+            bluetooth_pairing: false,
+        }
     }
 
     fn handle(&mut self, message: Message) {
         match message {
             Message::ButtonShortPress => log::info!("Button short press"),
+            Message::ButtonLongPress => {
+                self.bluetooth_pairing = !self.bluetooth_pairing;
+                if self.bluetooth_pairing {
+                    log::info!("Enter pairing mode");
+                    unsafe { sys::SetLedState(sys::LED_STATE_BLUETOOTH_PAIRING) };
+                } else {
+                    log::info!("Exit pairing mode");
+                    unsafe { sys::UnsetLedState(sys::LED_STATE_BLUETOOTH_PAIRING) };
+                }
+                unsafe { sys::BluetoothEnablePairing(self.bluetooth_pairing) };
+            }
             _ => log::info!("Unhandled {:?}", message),
         }
     }

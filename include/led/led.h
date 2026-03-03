@@ -3,7 +3,12 @@
 #include <cstdint>
 
 struct LedColor {
-    constexpr LedColor(uint8_t r, uint8_t g, uint8_t b) : r(r), g(g), b(b) {}
+    constexpr LedColor(uint8_t r, uint8_t g, uint8_t b)
+        : r(r)
+        , g(g)
+        , b(b)
+    {
+    }
 
     uint8_t r = 0;
     uint8_t g = 0;
@@ -40,7 +45,7 @@ enum class LedState : uint32_t {
 void InitLed();
 
 /// Enable a led state (reference counted)
-void SetLedState(LedState state);
+extern "C" void SetLedState(LedState state);
 
 /// Disable a led state (reference counted);
-void UnsetLedState(LedState state);
+extern "C" void UnsetLedState(LedState state);

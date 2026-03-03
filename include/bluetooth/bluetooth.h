@@ -1,4 +1,4 @@
 #pragma once
 
 void InitBluetooth();
-void BluetoothEnablePairing(bool enable);
+extern "C" void BluetoothEnablePairing(bool enable);
