@@ -5,6 +5,7 @@ extern crate alloc;
 
 mod c_api;
 mod engine;
+mod gamepad;
 mod info;
 mod logger;
 mod sys;

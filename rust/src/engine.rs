@@ -1,7 +1,9 @@
 use freertos_rust::{Duration, Queue, Task};
 use static_cell::StaticCell;
 
-use crate::{sys, util::InitCell};
+use crate::gamepad::{Gamepad, GamepadData, GamepadId};
+use crate::sys;
+use crate::util::InitCell;
 
 static QUEUE: InitCell<Queue<Message>> = InitCell::new();
 static ENGINE: StaticCell<Engine> = StaticCell::new();
@@ -14,6 +16,13 @@ pub enum Message {
     HandheldUnmount,
     /// Handheld control transfer complete
     HandheldXferComplete,
+
+    /// A gamepad has connected
+    GamepadConnected(Gamepad),
+    /// A gamepad has disconnected
+    GamepadDisconnected(GamepadId),
+    /// New gamepad data is received
+    GamepadData(GamepadData),
 
     ButtonShortPress,
     ButtonLongPress,
@@ -33,6 +42,12 @@ impl Engine {
 
     fn handle(&mut self, message: Message) {
         match message {
+            Message::GamepadConnected(g) => {
+                log::info!("Gamepad connected: id={}", g.id.as_u32());
+            }
+            Message::GamepadDisconnected(id) => {
+                log::info!("Gamepad disconnected: id={}", id.as_u32());
+            }
             Message::ButtonShortPress => log::info!("Button short press"),
             Message::ButtonLongPress => {
                 self.bluetooth_pairing = !self.bluetooth_pairing;
