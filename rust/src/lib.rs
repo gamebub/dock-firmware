@@ -7,6 +7,7 @@ mod c_api;
 mod engine;
 mod gamepad;
 mod info;
+mod led;
 mod logger;
 mod sys;
 mod util;

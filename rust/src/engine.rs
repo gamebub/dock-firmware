@@ -2,8 +2,8 @@ use freertos_rust::{Duration, Queue, Task};
 use static_cell::StaticCell;
 
 use crate::gamepad::{Gamepad, GamepadData, GamepadId};
-use crate::sys;
 use crate::util::InitCell;
+use crate::{led, sys};
 
 static QUEUE: InitCell<Queue<Message>> = InitCell::new();
 static ENGINE: StaticCell<Engine> = StaticCell::new();
@@ -44,9 +44,11 @@ impl Engine {
         match message {
             Message::GamepadConnected(g) => {
                 log::info!("Gamepad connected: id={}", g.id.as_u32());
-                self.bluetooth_pairing = false;
-                unsafe { sys::UnsetLedState(sys::LED_STATE_BLUETOOTH_PAIRING) };
-                unsafe { sys::BluetoothEnablePairing(false) };
+                if self.bluetooth_pairing {
+                    self.bluetooth_pairing = false;
+                    led::unset(led::LedState::BluetoothPairing);
+                    unsafe { sys::BluetoothEnablePairing(false) };
+                }
             }
             Message::GamepadDisconnected(id) => {
                 log::info!("Gamepad disconnected: id={}", id.as_u32());
@@ -56,10 +58,10 @@ impl Engine {
                 self.bluetooth_pairing = !self.bluetooth_pairing;
                 if self.bluetooth_pairing {
                     log::info!("Enter pairing mode");
-                    unsafe { sys::SetLedState(sys::LED_STATE_BLUETOOTH_PAIRING) };
+                    led::set(led::LedState::BluetoothPairing);
                 } else {
                     log::info!("Exit pairing mode");
-                    unsafe { sys::UnsetLedState(sys::LED_STATE_BLUETOOTH_PAIRING) };
+                    led::unset(led::LedState::BluetoothPairing);
                 }
                 unsafe { sys::BluetoothEnablePairing(self.bluetooth_pairing) };
             }
