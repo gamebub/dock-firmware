@@ -80,7 +80,7 @@ impl Engine {
                 if self.handheld == HandheldState::Active {
                     led::unset(led::LedState::DockActive);
                 }
-                // TODO: SetHdmiActive(false)
+                unsafe { sys::SetHdmiActive(false) };
                 self.handheld = HandheldState::Idle;
             }
             Message::HandheldXferComplete(result) => self.handle_handheld_xfer(result),
@@ -180,7 +180,7 @@ impl Engine {
                     self.write_gamepad_connected(gamepad);
                 }
 
-                // TODO: enable HDMI
+                unsafe { sys::SetHdmiActive(true) };
                 self.handheld = HandheldState::Active;
                 led::set(led::LedState::DockActive);
             }

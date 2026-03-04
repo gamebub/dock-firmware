@@ -8,6 +8,8 @@ unsafe extern "C" {
 unsafe extern "C" {
     pub unsafe fn BluetoothEnablePairing(enable: bool);
 
+    pub unsafe fn SetHdmiActive(active: bool);
+
     pub unsafe fn SetLedState(state: u32);
     pub unsafe fn UnsetLedState(state: u32);
 

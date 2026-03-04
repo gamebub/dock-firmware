@@ -2,4 +2,4 @@
 
 void InitGpio();
 
-void SetHdmiActive(bool active);
+extern "C" void SetHdmiActive(bool active);
