@@ -34,8 +34,12 @@ pub extern "C" fn rust_init() {
 
 #[cfg(not(test))]
 #[panic_handler]
-fn panic(_info: &core::panic::PanicInfo) -> ! {
-    // TODO: print the message somehow
+fn panic(info: &core::panic::PanicInfo) -> ! {
+    log::error!("PANIC: {}", info.message());
+    if let Some(location) = info.location() {
+        log::error!(" at {}", location);
+    }
+
     unsafe {
         sys::panic("Panic!\0".as_ptr());
     }
