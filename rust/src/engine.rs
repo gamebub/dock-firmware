@@ -170,7 +170,7 @@ impl Engine {
             }
             (HandheldState::WaitForDockBegin, REQ_DOCK_BEGIN) => {
                 if !result.data().is_ok() {
-                    log::info!("Dock begin failure");
+                    log::error!("Dock begin failure");
                     self.handheld = HandheldState::Error;
                     return;
                 }
@@ -184,7 +184,11 @@ impl Engine {
                 self.handheld = HandheldState::Active;
                 led::set(led::LedState::DockActive);
             }
-            _ => {}
+            _ => {
+                if !result.data().is_ok() {
+                    log::warn!("Xfer (req={}) failed", result.request);
+                }
+            }
         }
     }
 

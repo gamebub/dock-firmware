@@ -81,13 +81,19 @@ void usb_host_task(void*)
                     .complete_cb = control_xfer_complete_cb,
                     .user_data = event.tag,
                 };
-                if (tuh_control_xfer(&xfer)) {
-                    // Remove it from the queue.
-                    xQueueReceive(control_xfer_queue, nullptr, 0);
-                } else {
-                    // TODO: make sure these don't queue up too much
-                    log_warn("tuh_control_xfer failed");
-                    break;
+                bool result = tuh_control_xfer(&xfer);
+
+                // Remove it from the queue.
+                // TODO: maybe only remove if it's a non-critical transfer?
+                xQueueReceive(control_xfer_queue, nullptr, 0);
+
+                if (!result) {
+                    rust_event_handheld_xfer_complete(
+                        event.setup.bRequest,
+                        false,
+                        event.tag,
+                        (const uint8_t*)4,
+                        0);
                 }
             } else {
                 // No handheld, clear the queue.
