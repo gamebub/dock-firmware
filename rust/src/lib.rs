@@ -3,6 +3,7 @@
 
 extern crate alloc;
 
+mod bluetooth;
 mod c_api;
 mod engine;
 mod gamepad;

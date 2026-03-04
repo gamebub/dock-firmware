@@ -2,6 +2,7 @@ use alloc::vec::Vec;
 use freertos_rust::{Duration, Queue, Task};
 use static_cell::StaticCell;
 
+use crate::bluetooth::BluetoothPairingSession;
 use crate::gamepad::{Gamepad, GamepadData, GamepadId};
 use crate::util::InitCell;
 use crate::{led, sys, usb_host};
@@ -50,7 +51,7 @@ enum HandheldState {
 
 /// Main state machine
 struct Engine {
-    bluetooth_pairing: bool,
+    bluetooth_pairing: Option<BluetoothPairingSession>,
     handheld: HandheldState,
     gamepads: Vec<Gamepad>,
 }
@@ -58,7 +59,7 @@ struct Engine {
 impl Engine {
     fn new() -> Self {
         Engine {
-            bluetooth_pairing: false,
+            bluetooth_pairing: None,
             handheld: HandheldState::Idle,
             gamepads: Vec::new(),
         }
@@ -92,12 +93,7 @@ impl Engine {
                     self.write_gamepad_connected(self.gamepads.last().unwrap());
                 }
 
-                // End pairing if it was active.
-                if self.bluetooth_pairing {
-                    self.bluetooth_pairing = false;
-                    led::unset(led::LedState::BluetoothPairing);
-                    unsafe { sys::BluetoothEnablePairing(false) };
-                }
+                self.bluetooth_pairing = None;
             }
             Message::GamepadDisconnected(id) => {
                 log::info!("Gamepad disconnected: id={}", id.as_u32());
@@ -125,15 +121,14 @@ impl Engine {
             }
             Message::ButtonShortPress => log::info!("Button short press"),
             Message::ButtonLongPress => {
-                self.bluetooth_pairing = !self.bluetooth_pairing;
-                if self.bluetooth_pairing {
-                    log::info!("Enter pairing mode");
-                    led::set(led::LedState::BluetoothPairing);
-                } else {
-                    log::info!("Exit pairing mode");
-                    led::unset(led::LedState::BluetoothPairing);
-                }
-                unsafe { sys::BluetoothEnablePairing(self.bluetooth_pairing) };
+                self.bluetooth_pairing = match self.bluetooth_pairing {
+                    Some(_) => None,
+                    None => Some(BluetoothPairingSession::begin()),
+                };
+                log::info!(
+                    "Bluetooth pairing active: {}",
+                    self.bluetooth_pairing.is_some()
+                );
             }
         }
     }
