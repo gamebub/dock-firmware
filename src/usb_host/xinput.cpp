@@ -4,6 +4,7 @@
 #include "core/core.h"
 #include "host/usbh.h"
 #include "log/log.h"
+#include "rust_api.h"
 #include "tusb_config.h"
 #include "xinput_host.h"
 
@@ -32,10 +33,8 @@ static std::array<std::optional<XinputGamepad>, kMaxGamepads> gamepads;
 
 static void ReportEvent(uint32_t gamepad_id, xinputh_interface_t const* xid_itf) {
     const xinput_gamepad_t* p = &xid_itf->pad;
-    Event event;
-    event.type = EventType::kGamepadData;
-    event.gamepad_data.gamepad_id = gamepad_id;
-    GamepadData& data = event.gamepad_data.data;
+
+    GamepadData data;
     // ABXY
     data.buttons = (p->wButtons & 0xF000) >> 12;
     // DPAD
@@ -62,7 +61,8 @@ static void ReportEvent(uint32_t gamepad_id, xinputh_interface_t const* xid_itf)
     data.ry = (p->sThumbRY == INT16_MIN) ? INT16_MAX : -p->sThumbRY;
     data.lz = static_cast<uint16_t>(p->bLeftTrigger) << 8;
     data.rz = static_cast<uint16_t>(p->bRightTrigger) << 8;
-    PostEvent(event);
+    
+    rust_event_gamepad_data(gamepad_id, data);
 }
 
 void tuh_xinput_report_received_cb(uint8_t dev_addr, uint8_t instance, xinputh_interface_t const* xid_itf,
@@ -98,7 +98,7 @@ void tuh_xinput_mount_cb(uint8_t dev_addr, uint8_t instance, const xinputh_inter
     tuh_xinput_set_rumble(dev_addr, instance, 0, 0, true);
     tuh_xinput_receive_report(dev_addr, instance);
 
-    uint32_t gamepad_id = AssignGamepadId();
+    uint32_t gamepad_id = rust_gamepad_allocate_id();
 
     // Find an empty slot
     for (auto& gamepad : gamepads) {
@@ -129,13 +129,14 @@ void tuh_xinput_mount_cb(uint8_t dev_addr, uint8_t instance, const xinputh_inter
                 break;
         }
 
-        Event event;
-        event.type = EventType::kGamepadConnected;
-        event.gamepad_connected.gamepad.id = gamepad_id;
-        event.gamepad_connected.gamepad.gamepad_type = gamepad_type;
-        event.gamepad_connected.gamepad.wired = true;
-        memset(event.gamepad_connected.gamepad.device_id, 0, sizeof(event.gamepad_connected.gamepad.device_id));
-        PostEvent(event);
+        uint8_t device_id[8];
+        memset(device_id, 0, sizeof(device_id));
+        rust_event_gamepad_connected(
+            gamepad_id,
+            (uint32_t)gamepad_type,
+            device_id,
+            true
+        );
         return;
     }
     log_warn("No xinput slot available");
@@ -152,10 +153,7 @@ void tuh_xinput_umount_cb(uint8_t dev_addr, uint8_t instance) {
             continue;
         }
 
-        Event event;
-        event.type = EventType::kGamepadDisconnected;
-        event.gamepad_disconnected.gamepad_id = gamepad->gamepad_id;
-        PostEvent(event);
+        rust_event_gamepad_disconnected(gamepad->gamepad_id);
 
         gamepad.reset();
         break;

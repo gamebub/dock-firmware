@@ -3,9 +3,9 @@
 #include <array>
 #include <optional>
 
-#include "core/core.h"
 #include "hid_drivers/generic.h"
 #include "log/log.h"
+#include "rust_api.h"
 #include "tusb.h"
 
 namespace {
@@ -37,7 +37,7 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
     }
 
     // Initialize UsbHidGamepad struct.
-    gamepad->gamepad_id = AssignGamepadId();
+    gamepad->gamepad_id = rust_gamepad_allocate_id();
     gamepad->dev_addr = dev_addr;
     gamepad->instance = instance;
 
@@ -61,13 +61,14 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
     gamepad->driver->Initialize(descriptor);
 
     // Send connection event.
-    Event event;
-    event.type = EventType::kGamepadConnected;
-    event.gamepad_connected.gamepad.id = gamepad->gamepad_id;
-    event.gamepad_connected.gamepad.gamepad_type = gamepad->driver->GetGamepadType();
-    event.gamepad_connected.gamepad.wired = true;
-    memset(event.gamepad_connected.gamepad.device_id, 0, sizeof(event.gamepad_connected.gamepad.device_id));
-    PostEvent(event);
+    uint8_t device_id[8];
+    memset(device_id, 0, sizeof(device_id));
+    rust_event_gamepad_connected(
+        gamepad->gamepad_id,
+        (uint32_t)gamepad->driver->GetGamepadType(),
+        device_id,
+        true
+    );
 }
 
 void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance) {
@@ -81,10 +82,7 @@ void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance) {
             continue;
         }
 
-        Event event;
-        event.type = EventType::kGamepadDisconnected;
-        event.gamepad_disconnected.gamepad_id = gamepad->gamepad_id;
-        PostEvent(event);
+        rust_event_gamepad_disconnected(gamepad->gamepad_id);
 
         gamepad.reset();
         break;
@@ -117,9 +115,8 @@ void UsbHidDriver::RequestReport() {
 }
 
 void UsbHidDriver::ReportData(GamepadData data) {
-    Event event;
-    event.type = EventType::kGamepadData;
-    event.gamepad_data.gamepad_id = gamepad_.gamepad_id;
-    event.gamepad_data.data = data;
-    PostEvent(event);
+    rust_event_gamepad_data(
+        gamepad_.gamepad_id,
+        data
+    );
 }
