@@ -32,7 +32,7 @@ pub struct Gamepad {
     pub wired: bool,
 }
 
-#[repr(C)]
+#[repr(C, packed)]
 #[derive(Copy, Clone, Debug)]
 pub struct GamepadData {
     buttons: u32,

@@ -1,8 +1,8 @@
+use alloc::vec::Vec;
 use freertos_rust::{Duration, Queue, Task};
 use static_cell::StaticCell;
 
 use crate::gamepad::{Gamepad, GamepadData, GamepadId};
-use crate::usb_host::HandheldXferResult;
 use crate::util::InitCell;
 use crate::{led, sys, usb_host};
 
@@ -52,6 +52,7 @@ enum HandheldState {
 struct Engine {
     bluetooth_pairing: bool,
     handheld: HandheldState,
+    gamepads: Vec<Gamepad>,
 }
 
 impl Engine {
@@ -59,6 +60,7 @@ impl Engine {
         Engine {
             bluetooth_pairing: false,
             handheld: HandheldState::Idle,
+            gamepads: Vec::new(),
         }
     }
 
@@ -84,6 +86,13 @@ impl Engine {
             Message::HandheldXferComplete(result) => self.handle_handheld_xfer(result),
             Message::GamepadConnected(g) => {
                 log::info!("Gamepad connected: id={}", g.id.as_u32());
+                self.gamepads.push(g);
+
+                if self.handheld == HandheldState::Active {
+                    self.write_gamepad_connected(self.gamepads.last().unwrap());
+                }
+
+                // End pairing if it was active.
                 if self.bluetooth_pairing {
                     self.bluetooth_pairing = false;
                     led::unset(led::LedState::BluetoothPairing);
@@ -92,9 +101,27 @@ impl Engine {
             }
             Message::GamepadDisconnected(id) => {
                 log::info!("Gamepad disconnected: id={}", id.as_u32());
+                self.gamepads.retain(|x| x.id != id);
+
+                if self.handheld == HandheldState::Active {
+                    let mut buf = [0u8; 4];
+                    buf[0..4].copy_from_slice(&id.0.to_le_bytes());
+                    usb_host::handheld_control_out(REQ_GAMEPAD_DISCONNECT, 0, 0, &buf);
+                }
             }
             Message::GamepadData(id, data) => {
-                log::info!("Gamepad data: {:?}", data);
+                // TODO rate limiting
+                if self.handheld == HandheldState::Active {
+                    let mut buf = [0u8; 20];
+                    buf[0..4].copy_from_slice(&id.0.to_le_bytes());
+                    buf[4..20].copy_from_slice(unsafe {
+                        core::slice::from_raw_parts(
+                            (&data) as *const _ as *const u8,
+                            core::mem::size_of::<GamepadData>(),
+                        )
+                    });
+                    usb_host::handheld_control_out(REQ_GAMEPAD_DATA, 0, 0, &buf);
+                }
             }
             Message::ButtonShortPress => log::info!("Button short press"),
             Message::ButtonLongPress => {
@@ -147,15 +174,30 @@ impl Engine {
                     self.handheld = HandheldState::Error;
                     return;
                 }
-
                 log::info!("Dock begin");
-                // TODO: send already connected gamepads
+
+                for gamepad in &self.gamepads {
+                    self.write_gamepad_connected(gamepad);
+                }
+
                 // TODO: enable HDMI
                 self.handheld = HandheldState::Active;
                 led::set(led::LedState::DockActive);
             }
             _ => {}
         }
+    }
+
+    fn write_gamepad_connected(&self, gamepad: &Gamepad) {
+        // 4 byte: slot
+        // 4 byte: reserved
+        // 8 byte: gamepad device ID
+        // 32 byte: model name (\0 terminated)
+        let mut buf = [0u8; 48];
+        buf[0..4].copy_from_slice(&gamepad.id.0.to_le_bytes());
+        buf[8..16].copy_from_slice(&gamepad.device_id);
+        // TODO gamepad model name
+        usb_host::handheld_control_out(REQ_GAMEPAD_CONNECT, 0, 0, &buf);
     }
 }
 
