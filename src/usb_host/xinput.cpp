@@ -1,12 +1,13 @@
 #include <array>
 #include <optional>
 
-#include "core/core.h"
 #include "host/usbh.h"
 #include "log/log.h"
 #include "rust_api.h"
 #include "tusb_config.h"
 #include "xinput_host.h"
+
+#include "controller/uni_controller_type.h"
 
 namespace {
 constexpr size_t kMaxGamepads = CFG_TUH_XINPUT;

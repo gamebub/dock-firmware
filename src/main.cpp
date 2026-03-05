@@ -10,7 +10,6 @@
 
 //
 #include "bluetooth/bluetooth.h"
-#include "core/core.h"
 #include "git_commit.h"
 #include "gpio/gpio.h"
 #include "hwinfo/hwinfo.h"
@@ -35,7 +34,6 @@ int main()
     printf("firmware version: %u.%u.%u\n", DOCK_FW_VERSION_MAJOR, DOCK_FW_VERSION_MINOR, DOCK_FW_VERSION_PATCH);
 
     InitLed();
-    InitCore();
     InitUsbHost();
     InitBluetooth();
     InitGpio();

@@ -1,8 +1,19 @@
 #pragma once
 
-#include "core/core.h"
 #include <cstdbool>
 #include <cstdint>
+
+struct GamepadData {
+    // From bit 0:
+    // (A B X Y) (Up Down Right Left) (System Select Start Capture(?)) (L1 R1 L2 R2 L3 R3)
+    uint32_t buttons;
+    int16_t lx;
+    int16_t ly;
+    uint16_t lz;
+    int16_t rx;
+    int16_t ry;
+    uint16_t rz;
+};
 
 extern "C" {
 void rust_event_button_short(void);

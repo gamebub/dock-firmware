@@ -1,7 +1,6 @@
 #include "bluetooth/bluetooth.h"
 
 #include "FreeRTOS.h"
-#include "core/core.h"
 #include "pico/cyw43_arch.h"
 #include "priorities.h"
 #include "rust_api.h"

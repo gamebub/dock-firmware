@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "FreeRTOS.h"
-#include "core/core.h"
 #include "handheld/handheld.h"
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"

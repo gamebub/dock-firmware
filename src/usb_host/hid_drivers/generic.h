@@ -1,5 +1,7 @@
 #pragma once
 
+#include "controller/uni_controller_type.h"
+#include "controller/uni_gamepad.h"
 #include "usb_host/hid.h"
 
 class GenericHidDriver : public UsbHidDriver {

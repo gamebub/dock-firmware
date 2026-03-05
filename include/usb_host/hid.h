@@ -4,7 +4,8 @@
 #include <memory>
 #include <span>
 
-#include "core/core.h"
+#include "controller/uni_controller_type.h"
+#include "rust_api.h"
 
 class UsbHidDriver;
 
