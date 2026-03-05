@@ -12,7 +12,6 @@
 #include "bluetooth/bluetooth.h"
 #include "git_commit.h"
 #include "gpio/gpio.h"
-#include "hwinfo/hwinfo.h"
 #include "led/led.h"
 #include "priorities.h"
 #include "usb_device/usb_device.h"

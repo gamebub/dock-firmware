@@ -51,3 +51,13 @@ impl FirmwareVersion {
         self.0
     }
 }
+
+/// Fill in the buffer for a GetInfo USB control request.
+pub fn get_info_for_usb(buf: &mut [u8]) {
+    assert!(buf.len() == 24);
+    buf.fill(0);
+    buf[4..8].copy_from_slice(&SerialNumber::get().0.to_le_bytes());
+    buf[8..12].copy_from_slice(&HardwareVersion::get().as_u32().to_le_bytes());
+    buf[12..16].copy_from_slice(&FirmwareVersion::get().as_u32().to_le_bytes());
+    // TODO set firmware commit hash from 16..24
+}

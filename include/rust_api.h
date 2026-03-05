@@ -28,4 +28,7 @@ void rust_event_gamepad_disconnected(uint32_t id);
 void rust_event_handheld_mount(void);
 void rust_event_handheld_unmount(void);
 void rust_event_handheld_xfer_complete(uint8_t request, bool success, uintptr_t tag, const uint8_t* data, size_t data_len);
+
+void rust_info_get_for_usb(uint8_t* buffer, size_t len);
+uint32_t rust_info_serial_number();
 }

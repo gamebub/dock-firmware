@@ -5,13 +5,13 @@
 
 #include "FreeRTOS.h"
 #include "git_commit.h"
-#include "hwinfo/hwinfo.h"
 #include "led/led.h"
 #include "pico/bootrom.h"
 #include "pico/stdio.h"
 #include "pico/stdio/driver.h"
 #include "pico/time.h"
 #include "priorities.h"
+#include "rust_api.h"
 #include "task.h"
 #include "tusb.h"
 
@@ -154,12 +154,9 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, const tusb_contro
     switch (request->bRequest) {
         case kRequestGetInfo: {
             if (request->bmRequestType_bit.direction == TUSB_DIR_IN) {
-                ((uint32_t*)buffer)[0] = 0;
-                ((uint32_t*)buffer)[1] = GetSerialNumber();
-                ((uint32_t*)buffer)[2] = GetHardwareVersion().value();
-                ((uint32_t*)buffer)[3] = GetFirmwareVersion().value();
-                memcpy(&buffer[16], GIT_HASH_BYTES, 8);
-                tud_control_xfer(rhport, request, &buffer, 24);
+                size_t len = 24;
+                rust_info_get_for_usb(buffer, len);
+                tud_control_xfer(rhport, request, &buffer, len);
                 return true;
             }
             return false;

@@ -69,7 +69,6 @@ add_executable(dock-firmware
     ${SRC}/handheld/handheld.cpp
     ${SRC}/gpio/gpio.cpp
     ${SRC}/led/led.cpp
-    ${SRC}/hwinfo/hwinfo.cpp
     ${SRC}/usb_device/usb_device.cpp
     ${SRC}/usb_device/descriptors.c
     ${SRC}/usb_host/hid.cpp

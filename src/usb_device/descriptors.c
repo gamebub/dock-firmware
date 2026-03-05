@@ -28,6 +28,8 @@
 
 #include "tusb.h"
 
+uint32_t rust_info_serial_number();
+
 #define USBD_VID (0x1209)  // pid.codes
 #define USBD_PID (0xB011)  // Game Bub Dock
 #define USBD_MANUFACTURER "Second Bedroom"
@@ -54,9 +56,6 @@
 #define USBD_STR_SERIAL (0x03)
 #define USBD_STR_CDC (0x04)
 #define USBD_STR_VENDOR_CONTROL (0x05)
-
-// From hwinfo
-uint32_t GetSerialNumber();
 
 // Note: descriptors returned from callbacks must exist long enough for transfer to complete
 
@@ -133,7 +132,7 @@ const uint16_t* tud_descriptor_string_cb(uint8_t index, __unused uint16_t langid
     static uint16_t desc_str[USBD_DESC_STR_MAX];
 
     // Assign the SN.
-    uint32_t serial_number = GetSerialNumber();
+    uint32_t serial_number = rust_info_serial_number();
     snprintf(usbd_serial_str, sizeof(usbd_serial_str), "%08lX", serial_number);
 
     uint8_t len;

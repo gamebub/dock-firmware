@@ -68,3 +68,14 @@ pub extern "C" fn rust_event_handheld_xfer_complete(
     let result = HandheldXferResult::new(request, tag, success, data);
     engine::send(engine::Message::HandheldXferComplete(result));
 }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_info_get_for_usb(buffer: *mut u8, len: usize) {
+    let buffer = unsafe { core::slice::from_raw_parts_mut(buffer, len) };
+    crate::info::get_info_for_usb(buffer);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_info_serial_number() -> u32 {
+    crate::info::SerialNumber::get().0
+}
