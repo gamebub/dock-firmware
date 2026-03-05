@@ -38,17 +38,36 @@ impl HardwareVersion {
     }
 }
 
-#[derive(Copy, Clone)]
-pub struct FirmwareVersion(u32);
+#[repr(C)]
+#[derive(Copy, Clone, Debug)]
+pub struct FirmwareVersion {
+    pub major: u8,
+    pub minor: u8,
+    pub patch: u8,
+    pub pre: u8,
+}
 
 impl FirmwareVersion {
     pub fn get() -> Self {
-        // TODO
-        FirmwareVersion(0)
+        FirmwareVersion {
+            major: env!("DOCK_FW_VERSION_MAJOR").parse().unwrap_or(0),
+            minor: env!("DOCK_FW_VERSION_MINOR").parse().unwrap_or(0),
+            patch: env!("DOCK_FW_VERSION_PATCH").parse().unwrap_or(0),
+            pre: 0,
+        }
     }
 
     pub fn as_u32(&self) -> u32 {
-        self.0
+        (self.pre as u32)
+            | (self.patch as u32) << 8
+            | (self.major as u32) << 16
+            | (self.minor as u32) << 24
+    }
+}
+
+impl Display for FirmwareVersion {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)
     }
 }
 

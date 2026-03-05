@@ -93,10 +93,6 @@ target_compile_definitions(dock-firmware PRIVATE
   PICO_RP2350A=1
   PICO_RP2350_A2_SUPPORTED=1
 
-  "DOCK_FW_VERSION_MAJOR=${VERSION_MAJOR}"
-  "DOCK_FW_VERSION_MINOR=${VERSION_MINOR}"
-  "DOCK_FW_VERSION_PATCH=${VERSION_PATCH}"
-
   PICO_DEFAULT_UART=0
   PICO_DEFAULT_UART_TX_PIN=16
   PICO_DEFAULT_UART_RX_PIN=17
@@ -209,5 +205,10 @@ target_include_directories(dock-firmware PRIVATE "${CMAKE_BINARY_DIR}/generated"
 corrosion_import_crate(
     MANIFEST_PATH "${CMAKE_CURRENT_LIST_DIR}/rust/Cargo.toml"
     NO_STD
+)
+corrosion_set_env_vars(dock_rs
+    DOCK_FW_VERSION_MAJOR="${VERSION_MAJOR}"
+    DOCK_FW_VERSION_MINOR="${VERSION_MINOR}"
+    DOCK_FW_VERSION_PATCH="${VERSION_PATCH}"
 )
 target_link_libraries(dock-firmware dock_rs)

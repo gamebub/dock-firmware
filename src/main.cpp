@@ -30,8 +30,6 @@ int main()
 
     rust_init();
 
-    printf("firmware version: %u.%u.%u\n", DOCK_FW_VERSION_MAJOR, DOCK_FW_VERSION_MINOR, DOCK_FW_VERSION_PATCH);
-
     InitLed();
     InitUsbHost();
     InitBluetooth();

@@ -30,6 +30,7 @@ pub extern "C" fn rust_init() {
         info::HardwareVersion::get().as_u32()
     );
     log::info!("Serial Number: {}", info::SerialNumber::get());
+    log::info!("Firmware Version: {}", info::FirmwareVersion::get());
 
     engine::start_task();
 }
