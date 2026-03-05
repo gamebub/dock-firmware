@@ -7,6 +7,7 @@ mod bluetooth;
 mod c_api;
 mod engine;
 mod gamepad;
+mod handheld;
 mod info;
 mod led;
 mod logger;
