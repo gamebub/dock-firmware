@@ -66,7 +66,6 @@ add_executable(dock-firmware
     ${SRC}/main.cpp
     ${SRC}/freertos_rust_shim.c
     ${SRC}/bluetooth/bluetooth.cpp
-    ${SRC}/handheld/handheld.cpp
     ${SRC}/gpio/gpio.cpp
     ${SRC}/led/led.cpp
     ${SRC}/usb_device/usb_device.cpp
