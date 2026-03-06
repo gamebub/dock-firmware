@@ -1,5 +1,7 @@
 use core::fmt::{Display, Formatter};
 
+use crate::sys;
+
 const OTP_DATA_BASE: usize = 0x4013_0000;
 const OTP_DATA_LEN: usize = 8192;
 
@@ -71,6 +73,13 @@ impl Display for FirmwareVersion {
     }
 }
 
+pub fn get_git_commit() -> &'static [u8] {
+    unsafe {
+        let ptr = sys::GetGitCommitHash();
+        core::slice::from_raw_parts(ptr, 20)
+    }
+}
+
 /// Fill in the buffer for a GetInfo USB control request.
 pub fn get_info_for_usb(buf: &mut [u8]) {
     assert!(buf.len() == 24);
@@ -78,5 +87,5 @@ pub fn get_info_for_usb(buf: &mut [u8]) {
     buf[4..8].copy_from_slice(&SerialNumber::get().0.to_le_bytes());
     buf[8..12].copy_from_slice(&HardwareVersion::get().as_u32().to_le_bytes());
     buf[12..16].copy_from_slice(&FirmwareVersion::get().as_u32().to_le_bytes());
-    // TODO set firmware commit hash from 16..24
+    buf[16..24].copy_from_slice(&get_git_commit()[0..8]);
 }

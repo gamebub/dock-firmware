@@ -20,4 +20,6 @@ unsafe extern "C" {
         data_len: usize,
     );
     pub unsafe fn UsbHandheldControlIn(request: u8, value: u16, tag: usize, length: u16);
+
+    pub unsafe fn GetGitCommitHash() -> *const u8;
 }

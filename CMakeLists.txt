@@ -206,8 +206,8 @@ corrosion_import_crate(
     NO_STD
 )
 corrosion_set_env_vars(dock_rs
-    DOCK_FW_VERSION_MAJOR="${VERSION_MAJOR}"
-    DOCK_FW_VERSION_MINOR="${VERSION_MINOR}"
-    DOCK_FW_VERSION_PATCH="${VERSION_PATCH}"
+    DOCK_FW_VERSION_MAJOR=${VERSION_MAJOR}
+    DOCK_FW_VERSION_MINOR=${VERSION_MINOR}
+    DOCK_FW_VERSION_PATCH=${VERSION_PATCH}
 )
 target_link_libraries(dock-firmware dock_rs)
