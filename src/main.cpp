@@ -35,8 +35,6 @@ int main()
     InitBluetooth();
     InitGpio();
 
-    SetLedState(LedState::kStandby);
-
     // Start FreeRTOS (doesn't return).
     vTaskStartScheduler();
     return 0;

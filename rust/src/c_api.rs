@@ -1,6 +1,7 @@
 use crate::{
     engine,
     gamepad::{self, Gamepad, GamepadData, GamepadId},
+    led,
     usb_host::HandheldXferResult,
 };
 
@@ -78,4 +79,9 @@ pub extern "C" fn rust_info_get_for_usb(buffer: *mut u8, len: usize) {
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_info_serial_number() -> u32 {
     crate::info::SerialNumber::get().0
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_led_set_dfu() {
+    led::set(led::LedState::Dfu);
 }

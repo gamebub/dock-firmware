@@ -10,8 +10,7 @@ unsafe extern "C" {
 
     pub unsafe fn SetHdmiActive(active: bool);
 
-    pub unsafe fn SetLedState(state: u32);
-    pub unsafe fn UnsetLedState(state: u32);
+    pub unsafe fn LedSetColor(r: u8, g: u8, b: u8);
 
     pub unsafe fn UsbHandheldControlOut2(
         request: u8,

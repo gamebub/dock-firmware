@@ -170,7 +170,7 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, const tusb_contro
                     return true;
                 } else if (request->wValue == 2) {
                     // BOOTSEL reboot.
-                    SetLedState(LedState::kDfu);
+                    rust_led_set_dfu();
                     rom_reboot(BOOT_TYPE_BOOTSEL, /* delay_ms */ 100, /* DISABLE_MSD_INTERFACE */ 0x01, 0);
                     tud_control_status(rhport, request);
                     return true;

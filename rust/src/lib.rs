@@ -32,7 +32,10 @@ pub extern "C" fn rust_init() {
     log::info!("Serial Number: {}", info::SerialNumber::get());
     log::info!("Firmware Version: {}", info::FirmwareVersion::get());
 
+    led::start_task();
     engine::start_task();
+
+    led::set(led::LedState::Standby);
 }
 
 #[cfg(not(test))]

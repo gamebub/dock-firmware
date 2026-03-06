@@ -19,6 +19,8 @@ lto = true
 opt-level = "z"
 
 [dependencies]
+enum-map = "2.7.3"
 freertos-rust = "0.2.0"
+libm = "0.2.16"
 log = "0.4.29"
 static_cell = "2.1.1"

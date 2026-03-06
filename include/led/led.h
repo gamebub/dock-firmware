@@ -2,50 +2,5 @@
 
 #include <cstdint>
 
-struct LedColor {
-    constexpr LedColor(uint8_t r, uint8_t g, uint8_t b)
-        : r(r)
-        , g(g)
-        , b(b)
-    {
-    }
-
-    uint8_t r = 0;
-    uint8_t g = 0;
-    uint8_t b = 0;
-};
-
-static constexpr LedColor kColorBlack(0, 0, 0);
-
-enum class LedPattern {
-    kOff,
-    kSolid,
-    kBlink,
-    kBreathe,
-};
-
-struct LedBehavior {
-    LedPattern pattern;
-    LedColor color;
-    uint32_t period_ms = 0;
-    uint32_t repeat = 0;
-};
-
-enum class LedState : uint32_t {
-    kNone,
-
-    kStandby,
-    kBluetoothPairing,
-    kDockActive,
-    kDfu,
-
-    kCount,
-};
-
 void InitLed();
-
-/// Enable a led state (reference counted)
-extern "C" void SetLedState(LedState state);
-
-/// Disable a led state (reference counted);
-extern "C" void UnsetLedState(LedState state);
+extern "C" void LedSetColor(uint8_t r, uint8_t g, uint8_t b);
