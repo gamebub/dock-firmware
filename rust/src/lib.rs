@@ -7,6 +7,7 @@ mod bluetooth;
 mod c_api;
 mod engine;
 mod gamepad;
+mod gpio;
 mod handheld;
 mod info;
 mod led;
@@ -34,6 +35,7 @@ pub extern "C" fn rust_init() {
 
     led::start_task();
     engine::start_task();
+    gpio::init();
 
     led::set(led::LedState::Standby);
 }

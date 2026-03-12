@@ -27,8 +27,15 @@ impl<T> InitCell<T> {
     }
 
     pub fn get(&self) -> &T {
-        assert!(self.init_finished.load(Ordering::SeqCst));
-        unsafe { (*self.data.get()).assume_init_ref() }
+        self.maybe_get().unwrap()
+    }
+
+    pub fn maybe_get(&self) -> Option<&T> {
+        if self.init_finished.load(Ordering::SeqCst) {
+            Some(unsafe { (*self.data.get()).assume_init_ref() })
+        } else {
+            None
+        }
     }
 }
 

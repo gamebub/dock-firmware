@@ -8,7 +8,9 @@ unsafe extern "C" {
 unsafe extern "C" {
     pub unsafe fn BluetoothEnablePairing(enable: bool);
 
-    pub unsafe fn SetHdmiActive(active: bool);
+    pub unsafe fn GpioSetHdmiActive(active: bool);
+
+    pub unsafe fn GpioPollButton() -> bool;
 
     pub unsafe fn LedSetColor(r: u8, g: u8, b: u8);
 

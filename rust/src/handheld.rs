@@ -49,7 +49,7 @@ impl Handheld {
     }
 
     pub fn handle_unmount(&mut self) {
-        unsafe { sys::SetHdmiActive(false) };
+        unsafe { sys::GpioSetHdmiActive(false) };
     }
 
     pub fn handle_gamepad_connected(&mut self, gamepad: &Gamepad) {
@@ -121,7 +121,7 @@ impl Handheld {
                 }
                 log::info!("Dock begin");
 
-                unsafe { sys::SetHdmiActive(true) };
+                unsafe { sys::GpioSetHdmiActive(true) };
                 self.state = HandheldState::Active;
                 self.docked_led = Some(led::begin(led::LedState::DockActive));
             }

@@ -18,9 +18,6 @@ struct GamepadData {
 extern "C" {
 void rust_init(void);
 
-void rust_event_button_short(void);
-void rust_event_button_long(void);
-
 uint32_t rust_gamepad_allocate_id(void);
 
 void rust_event_gamepad_connected(uint32_t id, uint32_t kind, const uint8_t* device_id_ptr, bool wired);
@@ -35,4 +32,6 @@ void rust_info_get_for_usb(uint8_t* buffer, size_t len);
 uint32_t rust_info_serial_number();
 
 void rust_led_set_dfu(void);
+
+void rust_gpio_button_isr(void);
 }

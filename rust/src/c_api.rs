@@ -6,16 +6,6 @@ use crate::{
 };
 
 #[unsafe(no_mangle)]
-pub extern "C" fn rust_event_button_short() {
-    engine::send(engine::Message::ButtonShortPress);
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn rust_event_button_long() {
-    engine::send(engine::Message::ButtonLongPress);
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn rust_gamepad_allocate_id() -> u32 {
     gamepad::GamepadId::allocate().as_u32()
 }
@@ -84,4 +74,9 @@ pub extern "C" fn rust_info_serial_number() -> u32 {
 #[unsafe(no_mangle)]
 pub extern "C" fn rust_led_set_dfu() {
     led::set(led::LedState::Dfu);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rust_gpio_button_isr() {
+    crate::gpio::button_isr();
 }

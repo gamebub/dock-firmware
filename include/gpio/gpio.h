@@ -2,4 +2,5 @@
 
 void InitGpio();
 
-extern "C" void SetHdmiActive(bool active);
+extern "C" void GpioSetHdmiActive(bool active);
+extern "C" bool GpioPollButton();
