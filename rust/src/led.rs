@@ -52,7 +52,7 @@ static STATE_MAP: [(LedState, LedBehavior); 4] = [
         LedState::BluetoothPairing,
         LedBehavior {
             pattern: LedPattern::Blink,
-            color: LedColor(0, 0, 255),
+            color: LedColor(0, 0, 128),
             period_ms: Some(500),
             repeat: None,
         },
@@ -61,7 +61,7 @@ static STATE_MAP: [(LedState, LedBehavior); 4] = [
         LedState::DockActive,
         LedBehavior {
             pattern: LedPattern::Solid,
-            color: LedColor(150, 150, 150),
+            color: LedColor(128, 128, 128),
             period_ms: None,
             repeat: None,
         },
@@ -70,7 +70,8 @@ static STATE_MAP: [(LedState, LedBehavior); 4] = [
         LedState::Standby,
         LedBehavior {
             pattern: LedPattern::Solid,
-            color: LedColor(32, 0, 0),
+            // Minimum brightness, with gamma correction (maps to 1)
+            color: LedColor(24, 0, 0),
             period_ms: None,
             repeat: None,
         },
