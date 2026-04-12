@@ -30,6 +30,7 @@ void rust_event_handheld_xfer_complete(uint8_t request, bool success, uintptr_t 
 
 void rust_info_get_for_usb(uint8_t* buffer, size_t len);
 uint32_t rust_info_serial_number();
+uint32_t rust_info_hardware_version();
 
 void rust_led_set_dfu(void);
 

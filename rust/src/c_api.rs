@@ -72,6 +72,11 @@ pub extern "C" fn rust_info_serial_number() -> u32 {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn rust_info_hardware_version() -> u32 {
+    crate::info::HardwareVersion::get().as_u32()
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn rust_led_set_dfu() {
     led::set(led::LedState::Dfu);
 }
