@@ -76,7 +76,7 @@ impl Handheld {
         buf[0..4].copy_from_slice(&id.0.to_le_bytes());
         buf[4..20].copy_from_slice(unsafe {
             core::slice::from_raw_parts(
-                (&data) as *const _ as *const u8,
+                data as *const _ as *const u8,
                 core::mem::size_of::<GamepadData>(),
             )
         });
