@@ -30,6 +30,7 @@
 
 uint32_t rust_info_serial_number(void);
 uint32_t rust_info_hardware_version(void);
+uint64_t rust_info_chip_id(void);
 
 #define USBD_VID (0x1209) // pid.codes
 #define USBD_PID (0xB011) // Game Bub Dock
@@ -104,7 +105,7 @@ static const uint8_t usbd_desc_cfg[USBD_DESC_LEN] = {
     USBD_STR_VENDOR_CONTROL,
 };
 
-static char usbd_serial_str[8 + 1];
+static char usbd_serial_str[17 + 1];
 
 static const char* const usbd_desc_str[] = {
     [USBD_STR_MANUF] = USBD_MANUFACTURER,
@@ -144,6 +145,11 @@ const uint16_t* tud_descriptor_string_cb(uint8_t index, __unused uint16_t langid
     // Assign the SN.
     uint32_t serial_number = rust_info_serial_number();
     snprintf(usbd_serial_str, sizeof(usbd_serial_str), "%08lX", serial_number);
+
+    if (serial_number == 0 && rust_info_hardware_version() == 0) {
+        // Not provisioned, use the chip ID for a unique identifier.
+        snprintf(usbd_serial_str, sizeof(usbd_serial_str), "_%016llX", rust_info_chip_id());
+    }
 
     uint8_t len;
     if (index == 0) {

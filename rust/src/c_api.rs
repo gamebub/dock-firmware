@@ -77,6 +77,11 @@ pub extern "C" fn rust_info_hardware_version() -> u32 {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn rust_info_chip_id() -> u64 {
+    crate::info::get_chip_id()
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn rust_led_set_dfu() {
     led::set(led::LedState::Dfu);
 }
