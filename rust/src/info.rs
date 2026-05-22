@@ -89,3 +89,9 @@ pub fn get_info_for_usb(buf: &mut [u8]) {
     buf[12..16].copy_from_slice(&FirmwareVersion::get().as_u32().to_le_bytes());
     buf[16..24].copy_from_slice(&get_git_commit()[0..8]);
 }
+
+pub fn get_chip_id() -> u64 {
+    let lo = read_otp_entry(0, 0);
+    let hi = read_otp_entry(0, 2);
+    ((hi as u64) << 32) | (lo as u64)
+}

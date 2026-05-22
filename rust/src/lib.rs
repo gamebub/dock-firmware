@@ -32,6 +32,7 @@ pub extern "C" fn rust_init() {
     );
     log::info!("Serial Number: {}", info::SerialNumber::get());
     log::info!("Firmware Version: {}", info::FirmwareVersion::get());
+    log::info!("Chip ID: {:016X}", info::get_chip_id());
 
     led::start_task();
     engine::start_task();
