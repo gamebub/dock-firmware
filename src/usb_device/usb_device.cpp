@@ -140,6 +140,14 @@ void tud_cdc_rx_cb(uint8_t itf) {
     (void)count;
 }
 
+void tud_cdc_line_coding_cb(uint8_t /*itf*/, cdc_line_coding_t const* p_line_coding) {
+    if (p_line_coding->bit_rate == 1200) {
+        // Magic baud rate to enter BOOTSEL mode
+        rust_led_set_dfu();
+        rom_reboot(BOOT_TYPE_BOOTSEL, /* delay_ms */ 100, /* DISABLE_MSD_INTERFACE */ 0x01, 0);
+    }
+}
+
 bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, const tusb_control_request_t* request) {
     alignas(8) static uint8_t buffer[64];
 
