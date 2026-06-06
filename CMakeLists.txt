@@ -78,9 +78,9 @@ add_executable(dock-firmware
     ${PICO_TINYUSB_PATH}/src/portable/raspberrypi/pio_usb/hcd_pio_usb.c
 )
 
-set(VERSION_MAJOR 0)
-set(VERSION_MINOR 1)
-set(VERSION_PATCH 2)
+set(VERSION_MAJOR 1)
+set(VERSION_MINOR 0)
+set(VERSION_PATCH 0)
 
 pico_set_program_name(dock-firmware "dock-firmware")
 pico_set_program_version(dock-firmware "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
