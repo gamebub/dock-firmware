@@ -22,7 +22,6 @@
 namespace {
 constexpr size_t kStackSize = 8 * 1024;
 constexpr size_t kRxBufferMaxLen = 128;
-constexpr size_t kXferQueueLen = 16;
 constexpr size_t kXferBufferLen = 64;
 
 /// USB state for a handheld device
@@ -34,16 +33,7 @@ struct HandheldDeviceState {
     size_t rx_buffer_len = 0;
 };
 
-static std::optional<HandheldDeviceState> handheld_device {};
-
-struct ControlXfer {
-    uintptr_t tag;
-    tusb_control_request_t setup;
-    std::array<uint8_t, kXferBufferLen> buffer;
-};
-
-QueueHandle_t control_xfer_queue = nullptr;
-std::array<uint8_t, kXferBufferLen> control_xfer_buffer;
+static std::optional<HandheldDeviceState> handheld_device { };
 
 } // namespace
 
@@ -59,46 +49,7 @@ void usb_host_task(void*)
     tuh_init(BOARD_TUH_RHPORT);
 
     while (1) {
-        // TODO: figure out the best way to interleave device acceses and tuh_task without busy-looping.
-        tuh_task_ext(1, false);
-
-        // Send transfers.
-        ControlXfer event {};
-        while (true) {
-            auto result = xQueuePeek(control_xfer_queue, &event, 0);
-            if (result != pdPASS) {
-                break;
-            }
-            if (handheld_device.has_value()) {
-                // TODO: only copy if OUT
-                memcpy(control_xfer_buffer.data(), event.buffer.data(), event.setup.wLength);
-                tuh_xfer_t xfer = {
-                    .daddr = handheld_device->address,
-                    .ep_addr = 0,
-                    .setup = &event.setup,
-                    .buffer = control_xfer_buffer.data(),
-                    .complete_cb = control_xfer_complete_cb,
-                    .user_data = event.tag,
-                };
-                bool result = tuh_control_xfer(&xfer);
-
-                // Remove it from the queue.
-                // TODO: maybe only remove if it's a non-critical transfer?
-                xQueueReceive(control_xfer_queue, nullptr, 0);
-
-                if (!result) {
-                    rust_event_handheld_xfer_complete(
-                        event.setup.bRequest,
-                        false,
-                        event.tag,
-                        (const uint8_t*)4,
-                        0);
-                }
-            } else {
-                // No handheld, clear the queue.
-                xQueueReset(control_xfer_queue);
-            }
-        }
+        tuh_task();
     }
 }
 
@@ -125,14 +76,12 @@ void InitUsbHost()
     xTaskCreate(usb_host_task, "usbh", kStackSize, NULL, static_cast<UBaseType_t>(TaskPriority::kUsbHost),
         &task_handle);
     vTaskCoreAffinitySet(task_handle, 1 << 1);
-
-    control_xfer_queue = xQueueCreate(kXferQueueLen, sizeof(ControlXfer));
 }
 
 /// Return the port that the device is plugged into, or 0 if not plugged into the root hub.
 static uint8_t GetDeviceHubPort(uint8_t device_address)
 {
-    hcd_devtree_info_t devtree_info {};
+    hcd_devtree_info_t devtree_info { };
     hcd_devtree_get_info(device_address, &devtree_info);
     uint8_t port = devtree_info.hub_port;
 
@@ -156,9 +105,11 @@ void UsbHandheldControlOut(uint8_t request, uint16_t value, uintptr_t tag, std::
         return;
     }
 
-    ControlXfer xfer = {};
-    xfer.tag = tag;
-    xfer.setup = {
+    // TODO: use a free-list instead of malloc?
+    uint8_t* buffer = (uint8_t*)malloc(data.size());
+    memcpy(buffer, data.data(), data.size());
+
+    tusb_control_request_t setup = {
         .bmRequestType_bit = {
             .recipient = TUSB_REQ_RCPT_INTERFACE,
             .type = TUSB_REQ_TYPE_VENDOR,
@@ -169,19 +120,33 @@ void UsbHandheldControlOut(uint8_t request, uint16_t value, uintptr_t tag, std::
         .wIndex = 0, // TODO: read descriptor to find correct interface index
         .wLength = (uint16_t)data.size(),
     };
-    memcpy(xfer.buffer.data(), data.data(), data.size());
 
-    auto result = xQueueSendToBack(control_xfer_queue, &xfer, /* xTicksToWait= */ 0);
-    if (result != pdPASS) {
-        log_error("Failed to post Control Out");
+    tuh_xfer_t xfer = {
+        .daddr = handheld_device->address,
+        .ep_addr = 0,
+        .setup = &setup,
+        .buffer = buffer,
+        .complete_cb = control_xfer_complete_cb,
+        .user_data = tag,
+    };
+    bool result = tuh_control_xfer(&xfer);
+    if (!result) {
+        free(buffer);
+        rust_event_handheld_xfer_complete(
+            request,
+            false,
+            tag,
+            (const uint8_t*)4,
+            0);
     }
 }
 
 void UsbHandheldControlIn(uint8_t request, uint16_t value, uintptr_t tag, uint16_t length)
 {
-    ControlXfer xfer = {};
-    xfer.tag = tag;
-    xfer.setup = {
+    // TODO: use a free-list instead of malloc?
+    uint8_t* buffer = (uint8_t*)malloc(length);
+
+    tusb_control_request_t setup = {
         .bmRequestType_bit = {
             .recipient = TUSB_REQ_RCPT_INTERFACE,
             .type = TUSB_REQ_TYPE_VENDOR,
@@ -192,9 +157,19 @@ void UsbHandheldControlIn(uint8_t request, uint16_t value, uintptr_t tag, uint16
         .wIndex = 0,
         .wLength = length,
     };
-    auto result = xQueueSendToBack(control_xfer_queue, &xfer, /* xTicksToWait= */ 0);
-    if (result != pdPASS) {
-        log_error("Failed to post Control In");
+
+    tuh_xfer_t xfer = {
+        .daddr = handheld_device->address,
+        .ep_addr = 0,
+        .setup = &setup,
+        .buffer = buffer,
+        .complete_cb = control_xfer_complete_cb,
+        .user_data = tag,
+    };
+    bool result = tuh_control_xfer(&xfer);
+    if (!result) {
+        free(buffer);
+        log_error("Failed to start Control In");
     }
 }
 
@@ -242,7 +217,7 @@ void tuh_cdc_rx_cb(uint8_t idx)
 
 void tuh_cdc_mount_cb(uint8_t idx)
 {
-    tuh_itf_info_t itf_info {};
+    tuh_itf_info_t itf_info { };
     tuh_cdc_itf_get_info(idx, &itf_info);
 
     printf("USB CDC mounted: address=%u itf_num=%u\n", itf_info.daddr, itf_info.desc.bInterfaceNumber);
@@ -269,7 +244,7 @@ void tuh_cdc_mount_cb(uint8_t idx)
 
 void tuh_cdc_umount_cb(uint8_t idx)
 {
-    tuh_itf_info_t itf_info {};
+    tuh_itf_info_t itf_info { };
     tuh_cdc_itf_get_info(idx, &itf_info);
     printf("USB CDC unmounted: address=%u, itf_num=%u\n", itf_info.daddr, itf_info.desc.bInterfaceNumber);
 
@@ -293,4 +268,5 @@ static void control_xfer_complete_cb(tuh_xfer_t* xfer)
         xfer->user_data,
         xfer->buffer,
         xfer->actual_len);
+    free(xfer->buffer);
 }
