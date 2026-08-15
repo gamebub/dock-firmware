@@ -26,6 +26,7 @@
  * THE SOFTWARE.
  */
 
+#include <stdio.h>
 #include "tusb.h"
 
 uint32_t rust_info_serial_number(void);

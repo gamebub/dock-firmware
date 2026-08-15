@@ -116,12 +116,11 @@ void usb_device_task(void*) {
 void InitUsbDevice() {
     mutex = xSemaphoreCreateMutex();
 
-    tud_cdc_configure_t cdc_config = TUD_CDC_CONFIGURE_DEFAULT();
-    cdc_config.tx_overwritabe_if_not_connected = 1;
-    cdc_config.tx_persistent = 1;
-    cdc_config.rx_persistent = 1;
-    tud_cdc_configure(&cdc_config);
-    tud_init(0);
+    const tusb_rhport_init_t rh_init = {
+        .role = TUSB_ROLE_DEVICE,
+        .speed = TUSB_SPEED_FULL,
+    };
+    tud_rhport_init(0, &rh_init);
 
     stdio_set_driver_enabled(&stdio_usb, true);
 

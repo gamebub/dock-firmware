@@ -147,6 +147,10 @@
 #define CFG_TUD_CDC_RX_BUFSIZE   64
 #define CFG_TUD_CDC_TX_BUFSIZE   64
 
+#define CFG_TUD_CDC_RX_PERSISTENT 1
+#define CFG_TUD_CDC_TX_PERSISTENT 1
+#define CFG_TUD_CDC_TX_OVERWRITABLE_IF_NOT_CONNECTED 1
+
 // CDC Endpoint transfer buffer size, more is faster
 #define CFG_TUD_CDC_EP_BUFSIZE   64
 
