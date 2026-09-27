@@ -26,8 +26,12 @@ constexpr size_t kXferBufferLen = 64;
 
 /// USB state for a handheld device
 struct HandheldDeviceState {
-    uint8_t address;
-    uint8_t cdc_index;
+    uint8_t address = 0xFF;
+    uint8_t cdc_index = 0xFF;
+
+    uint8_t vendor_itf_num = 0xFF;
+    uint8_t vendor_ep_out = 0xFF;
+    uint8_t vendor_ep_in = 0xFF;
 
     uint8_t rx_buffer[kRxBufferMaxLen];
     size_t rx_buffer_len = 0;
@@ -35,9 +39,12 @@ struct HandheldDeviceState {
 
 static std::optional<HandheldDeviceState> handheld_device { };
 
+static uint8_t configDescriptorBuf[256];
+
 } // namespace
 
 static void control_xfer_complete_cb(tuh_xfer_t* xfer);
+static void config_descriptor_xfer_complete_cb(tuh_xfer_t* xfer);
 
 void usb_host_task(void*)
 {
@@ -117,7 +124,7 @@ void UsbHandheldControlOut(uint8_t request, uint16_t value, uintptr_t tag, std::
         },
         .bRequest = request,
         .wValue = value,
-        .wIndex = 0, // TODO: read descriptor to find correct interface index
+        .wIndex = handheld_device->vendor_itf_num,
         .wLength = (uint16_t)data.size(),
     };
 
@@ -180,17 +187,101 @@ void tuh_mount_cb(uint8_t dev_addr)
     tuh_vid_pid_get(dev_addr, &vid, &pid);
     uint8_t port = GetDeviceHubPort(dev_addr);
     printf("Mounted USB device: port=%d addr=%d [%04X:%04X]\n", port, dev_addr, vid, pid);
+
+    // Determine whether this is a handheld.
+    if (port != Handheld::kHubPort) {
+        // Not plugged into the main port.
+        return;
+    }
+    if (!Handheld::CheckUsbId(vid, pid)) {
+        return;
+    }
+
+    // Prepare handheld state.
+    handheld_device.emplace();
+    handheld_device->address = dev_addr;
+
+    // Load descriptors and find interfaces / endpoints.
+    tuh_descriptor_get_configuration(
+        dev_addr,
+        /* index= */ 0,
+        configDescriptorBuf,
+        sizeof(configDescriptorBuf),
+        config_descriptor_xfer_complete_cb,
+        /* user_data= */ 0);
 }
 
 void tuh_umount_cb(uint8_t dev_addr)
 {
     printf("Unmounted USB device address=%d\n", dev_addr);
+    if (handheld_device.has_value() && handheld_device->address == dev_addr) {
+        handheld_device.reset();
+        rust_event_handheld_unmount();
+    }
+}
+
+void config_descriptor_xfer_complete_cb(tuh_xfer_t* xfer)
+{
+    if (xfer->result != XFER_RESULT_SUCCESS) {
+        printf("Failed to retrieve config descriptor: %d\n", xfer->result);
+        return;
+    }
+    if (!handheld_device.has_value()) {
+        // This shouldn't happen.
+        return;
+    }
+
+    const uint8_t* p_desc = xfer->buffer;
+    const uint16_t total_len = xfer->actual_len;
+    const uint8_t* p_end = p_desc + total_len;
+
+    bool current_interface_is_vendor = false;
+
+    // Iterate through all of the descriptors.
+    while (p_desc < p_end) {
+        uint8_t desc_type = tu_desc_type(p_desc);
+
+        if (desc_type == TUSB_DESC_INTERFACE) {
+            tusb_desc_interface_t* itf_desc = (tusb_desc_interface_t*)p_desc;
+
+            // Check for the required vendor-specific interface.
+            current_interface_is_vendor = false;
+            if (itf_desc->bInterfaceClass == TUSB_CLASS_VENDOR_SPECIFIC && itf_desc->bInterfaceSubClass == 1 && itf_desc->bInterfaceProtocol == 0) {
+                current_interface_is_vendor = true;
+                handheld_device->vendor_itf_num = itf_desc->bInterfaceNumber;
+            }
+        } else if (desc_type == TUSB_DESC_ENDPOINT && current_interface_is_vendor) {
+            tusb_desc_endpoint_t* ep_desc = (tusb_desc_endpoint_t*)p_desc;
+            uint8_t ep_addr = ep_desc->bEndpointAddress;
+
+            // Check for the required endpoints.
+            if (ep_desc->bmAttributes.xfer == TUSB_XFER_BULK && tu_edpt_dir(ep_addr) == TUSB_DIR_OUT) {
+                handheld_device->vendor_ep_out = ep_addr;
+                tuh_edpt_open(xfer->daddr, ep_desc);
+            }
+            if (ep_desc->bmAttributes.xfer == TUSB_XFER_BULK && tu_edpt_dir(ep_addr) == TUSB_DIR_IN) {
+                handheld_device->vendor_ep_in = ep_addr;
+                tuh_edpt_open(xfer->daddr, ep_desc);
+            }
+        }
+
+        p_desc = tu_desc_next(p_desc);
+    }
+
+    // Complete the mount.
+    printf("Vendor interface: num=%d ep_out=%02x ep_in=%02x\n", handheld_device->vendor_itf_num, handheld_device->vendor_ep_out, handheld_device->vendor_ep_in);
+    rust_event_handheld_mount();
 }
 
 void tuh_cdc_rx_cb(uint8_t idx)
 {
+    tuh_itf_info_t info;
+    if (!tuh_cdc_itf_get_info(idx, &info)) {
+        return;
+    }
+
     // Ignore non-handheld data.
-    if (!handheld_device.has_value() || handheld_device->cdc_index != idx) {
+    if (!handheld_device.has_value() || handheld_device->address != info.daddr) {
         return;
     }
     auto& state = *handheld_device;
@@ -212,45 +303,6 @@ void tuh_cdc_rx_cb(uint8_t idx)
             state.rx_buffer[state.rx_buffer_len] = data;
             state.rx_buffer_len++;
         }
-    }
-}
-
-void tuh_cdc_mount_cb(uint8_t idx)
-{
-    tuh_itf_info_t itf_info { };
-    tuh_cdc_itf_get_info(idx, &itf_info);
-
-    printf("USB CDC mounted: address=%u itf_num=%u\n", itf_info.daddr, itf_info.desc.bInterfaceNumber);
-
-    // Determine whether this is a handheld
-    if (GetDeviceHubPort(itf_info.daddr) != Handheld::kHubPort) {
-        // Not plugged into the main port.
-        return;
-    }
-    uint16_t vid = 0;
-    uint16_t pid = 0;
-    if (!tuh_vid_pid_get(itf_info.daddr, &vid, &pid)) {
-        return;
-    }
-    if (!Handheld::CheckUsbId(vid, pid)) {
-        return;
-    }
-
-    handheld_device.emplace();
-    handheld_device->address = itf_info.daddr;
-    handheld_device->cdc_index = idx;
-    rust_event_handheld_mount();
-}
-
-void tuh_cdc_umount_cb(uint8_t idx)
-{
-    tuh_itf_info_t itf_info { };
-    tuh_cdc_itf_get_info(idx, &itf_info);
-    printf("USB CDC unmounted: address=%u, itf_num=%u\n", itf_info.daddr, itf_info.desc.bInterfaceNumber);
-
-    if (handheld_device.has_value() && handheld_device->address == itf_info.daddr) {
-        handheld_device.reset();
-        rust_event_handheld_unmount();
     }
 }
 
