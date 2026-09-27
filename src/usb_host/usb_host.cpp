@@ -41,10 +41,15 @@ static std::optional<HandheldDeviceState> handheld_device { };
 
 static uint8_t configDescriptorBuf[256];
 
+static uint8_t handheldOutPacketBuf[64];
+static bool handheldOutPacketBusy = false;
+
 } // namespace
 
 static void control_xfer_complete_cb(tuh_xfer_t* xfer);
 static void config_descriptor_xfer_complete_cb(tuh_xfer_t* xfer);
+static void bulk_out_xfer_complete_cb(tuh_xfer_t* xfer);
+static void pump_handheld_packet_queue(void);
 
 void usb_host_task(void*)
 {
@@ -56,7 +61,8 @@ void usb_host_task(void*)
     tuh_init(BOARD_TUH_RHPORT);
 
     while (1) {
-        tuh_task();
+        tuh_task_ext(1, false);
+        pump_handheld_packet_queue();
     }
 }
 
@@ -270,6 +276,7 @@ void config_descriptor_xfer_complete_cb(tuh_xfer_t* xfer)
 
     // Complete the mount.
     printf("Vendor interface: num=%d ep_out=%02x ep_in=%02x\n", handheld_device->vendor_itf_num, handheld_device->vendor_ep_out, handheld_device->vendor_ep_in);
+    handheldOutPacketBusy = false;
     rust_event_handheld_mount();
 }
 
@@ -321,4 +328,37 @@ static void control_xfer_complete_cb(tuh_xfer_t* xfer)
         xfer->buffer,
         xfer->actual_len);
     free(xfer->buffer);
+}
+
+static void bulk_out_xfer_complete_cb(tuh_xfer_t* xfer)
+{
+    handheldOutPacketBusy = false;
+    if (xfer->result != XFER_RESULT_SUCCESS) {
+        printf("bulk OUT failed: %d", xfer->result);
+    }
+    pump_handheld_packet_queue();
+}
+
+void pump_handheld_packet_queue()
+{
+    if (handheldOutPacketBusy || !handheld_device.has_value()) {
+        return;
+    }
+
+    size_t packet_len = sizeof(handheldOutPacketBuf);
+    bool has_packet = rust_handheld_pop_next_packet(handheldOutPacketBuf, &packet_len);
+    if (!has_packet) {
+        return;
+    }
+
+    handheldOutPacketBusy = true;
+    tuh_xfer_t xfer = {
+        .daddr = handheld_device->address,
+        .ep_addr = handheld_device->vendor_ep_out,
+        .buflen = packet_len,
+        .buffer = handheldOutPacketBuf,
+        .complete_cb = bulk_out_xfer_complete_cb,
+        .user_data = 0,
+    };
+    tuh_edpt_xfer(&xfer);
 }

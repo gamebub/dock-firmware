@@ -1,7 +1,11 @@
+use alloc::collections::vec_deque::VecDeque;
+use freertos_rust::{Duration, Mutex};
+
 use crate::{
     gamepad::{Gamepad, GamepadData, GamepadId},
     led::{self, LedSession},
     sys, usb_host,
+    util::InitCell,
 };
 
 const REQ_GET_INFO: u8 = 0;
@@ -9,6 +13,8 @@ const REQ_DOCK_BEGIN: u8 = 3;
 const REQ_GAMEPAD_CONNECT: u8 = 4;
 const REQ_GAMEPAD_DISCONNECT: u8 = 5;
 const REQ_GAMEPAD_DATA: u8 = 6;
+
+pub(crate) static TX_PACKET_QUEUE: InitCell<PacketQueue> = InitCell::new();
 
 /// Docked handheld state manager
 pub struct Handheld {
@@ -32,6 +38,8 @@ enum HandheldState {
 
 impl Handheld {
     pub fn new() -> Self {
+        TX_PACKET_QUEUE.get().reset();
+
         Handheld {
             state: HandheldState::Idle,
             docked_led: None,
@@ -49,6 +57,7 @@ impl Handheld {
     }
 
     pub fn handle_unmount(&mut self) {
+        TX_PACKET_QUEUE.get().reset();
         unsafe { sys::GpioSetHdmiActive(false) };
     }
 
@@ -61,17 +70,20 @@ impl Handheld {
         buf[0..4].copy_from_slice(&gamepad.id.0.to_le_bytes());
         buf[8..16].copy_from_slice(&gamepad.device_id);
         // TODO gamepad model name
-        usb_host::handheld_control_out(REQ_GAMEPAD_CONNECT, 0, 0, &buf);
+
+        let packet = Packet::new(REQ_GAMEPAD_CONNECT, &buf);
+        TX_PACKET_QUEUE.get().push_back(packet);
     }
 
     pub fn handle_gamepad_disconnected(&mut self, id: GamepadId) {
         let mut buf = [0u8; 4];
         buf[0..4].copy_from_slice(&id.0.to_le_bytes());
-        usb_host::handheld_control_out(REQ_GAMEPAD_DISCONNECT, 0, 0, &buf);
+
+        let packet = Packet::new(REQ_GAMEPAD_DISCONNECT, &buf);
+        TX_PACKET_QUEUE.get().push_back(packet);
     }
 
     pub fn handle_gamepad_data(&mut self, id: GamepadId, data: &GamepadData) {
-        // TODO: rate limiting
         let mut buf = [0u8; 20];
         buf[0..4].copy_from_slice(&id.0.to_le_bytes());
         buf[4..20].copy_from_slice(unsafe {
@@ -80,7 +92,9 @@ impl Handheld {
                 core::mem::size_of::<GamepadData>(),
             )
         });
-        usb_host::handheld_control_out(REQ_GAMEPAD_DATA, 0, 0, &buf);
+
+        let packet = Packet::new(REQ_GAMEPAD_DATA, &buf);
+        TX_PACKET_QUEUE.get().push_back(packet);
     }
 
     pub fn handle_xfer_complete(&mut self, result: usb_host::HandheldXferResult) {
@@ -132,4 +146,81 @@ impl Handheld {
             }
         }
     }
+}
+
+pub struct Packet {
+    id: u8,
+    payload: [u8; 60],
+    payload_len: u8,
+}
+
+impl Packet {
+    pub fn new(id: u8, payload: &[u8]) -> Packet {
+        assert!(payload.len() <= 60);
+        let mut buffer = [0u8; 60];
+        buffer[..payload.len()].copy_from_slice(payload);
+        Packet {
+            id,
+            payload: buffer,
+            payload_len: payload.len() as u8,
+        }
+    }
+
+    pub fn payload(&self) -> &[u8] {
+        &self.payload[..self.payload_len as usize]
+    }
+
+    pub fn encode_to(&self, buf: &mut [u8]) -> usize {
+        assert!(buf.len() >= 64);
+        let len = 4 + (self.payload_len as usize);
+        buf[0] = self.id;
+        buf[1] = 0;
+        buf[2] = 0;
+        buf[3] = 0;
+        buf[4..len].copy_from_slice(self.payload());
+        len
+    }
+}
+
+pub struct PacketQueue {
+    packets: Mutex<VecDeque<Packet>>,
+}
+
+impl PacketQueue {
+    pub fn new() -> Self {
+        PacketQueue {
+            packets: Mutex::new(VecDeque::new()).unwrap(),
+        }
+    }
+
+    pub fn pop_front(&self) -> Option<Packet> {
+        let mut queue = self.packets.lock(Duration::infinite()).unwrap();
+        queue.pop_front()
+    }
+
+    pub fn push_back(&self, packet: Packet) {
+        let mut queue = self.packets.lock(Duration::infinite()).unwrap();
+
+        // If the last packet pushed is a REQ_GAMEPAD_DATA packet, just replace it.
+        if packet.id == REQ_GAMEPAD_DATA {
+            if let Some(back) = queue.back_mut()
+                && back.id == REQ_GAMEPAD_DATA
+            {
+                *back = packet;
+                log::warn!("Dropping gamepad data");
+                return;
+            }
+        }
+
+        queue.push_back(packet);
+    }
+
+    pub fn reset(&self) {
+        let mut queue = self.packets.lock(Duration::infinite()).unwrap();
+        queue.clear();
+    }
+}
+
+pub fn init() {
+    TX_PACKET_QUEUE.set(PacketQueue::new());
 }

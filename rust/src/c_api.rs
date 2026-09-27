@@ -61,6 +61,23 @@ pub extern "C" fn rust_event_handheld_xfer_complete(
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn rust_handheld_pop_next_packet(buffer: *mut u8, len: *mut usize) -> bool {
+    let queue = match crate::handheld::TX_PACKET_QUEUE.maybe_get() {
+        Some(queue) => queue,
+        None => return false,
+    };
+    match queue.pop_front() {
+        Some(packet) => {
+            let buffer = unsafe { core::slice::from_raw_parts_mut(buffer, *len) };
+            let encoded_len = packet.encode_to(buffer);
+            unsafe { *len = encoded_len }
+            true
+        }
+        None => false,
+    }
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn rust_info_get_for_usb(buffer: *mut u8, len: usize) {
     let buffer = unsafe { core::slice::from_raw_parts_mut(buffer, len) };
     crate::info::get_info_for_usb(buffer);
