@@ -45,7 +45,6 @@ static void platform_on_init_complete(void) {
     uni_bt_list_keys_unsafe();
 
     // TODO: don't allow new connections by default
-    uni_bt_del_keys_unsafe();
     uni_bt_start_scanning_and_autoconnect_safe();
 
     uni_property_dump_all();
