@@ -23,6 +23,7 @@ namespace {
 constexpr size_t kStackSize = 8 * 1024;
 constexpr size_t kRxBufferMaxLen = 128;
 constexpr size_t kXferBufferLen = 64;
+constexpr size_t kMaxTransferFailures = 3;
 
 /// USB state for a handheld device
 struct HandheldDeviceState {
@@ -35,6 +36,8 @@ struct HandheldDeviceState {
 
     uint8_t rx_buffer[kRxBufferMaxLen];
     size_t rx_buffer_len = 0;
+
+    size_t transfer_failures = 0;
 };
 
 static std::optional<HandheldDeviceState> handheld_device { };
@@ -333,10 +336,19 @@ static void control_xfer_complete_cb(tuh_xfer_t* xfer)
 static void bulk_out_xfer_complete_cb(tuh_xfer_t* xfer)
 {
     handheldOutPacketBusy = false;
-    if (xfer->result != XFER_RESULT_SUCCESS) {
-        printf("bulk OUT failed: %d", xfer->result);
+    if (!handheld_device.has_value()) {
+        return;
     }
-    pump_handheld_packet_queue();
+
+    if (xfer->result == XFER_RESULT_SUCCESS) {
+        handheld_device->transfer_failures = 0;
+        pump_handheld_packet_queue();
+    } else if (++handheld_device->transfer_failures >= kMaxTransferFailures) {
+        // Force unmount
+        printf("Max transfer failures, unmounting handheld\n");
+        handheld_device.reset();
+        rust_event_handheld_unmount();
+    }
 }
 
 void pump_handheld_packet_queue()
