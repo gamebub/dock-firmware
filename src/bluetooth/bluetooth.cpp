@@ -95,6 +95,10 @@ static uni_error_t platform_on_device_ready(uni_hid_device_t* d) {
         false
     );
 
+    if (d->report_parser.set_player_leds != NULL) {
+        d->report_parser.set_player_leds(d, 1);
+    }
+
     // Can reject the connection by returning an error.
     return UNI_ERROR_SUCCESS;
 }
