@@ -62,8 +62,8 @@ impl FirmwareVersion {
     pub fn as_u32(&self) -> u32 {
         (self.pre as u32)
             | (self.patch as u32) << 8
-            | (self.major as u32) << 16
-            | (self.minor as u32) << 24
+            | (self.minor as u32) << 16
+            | (self.major as u32) << 24
     }
 }
 
