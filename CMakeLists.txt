@@ -80,7 +80,7 @@ add_executable(dock-firmware
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 0)
-set(VERSION_PATCH 0)
+set(VERSION_PATCH 2)
 
 pico_set_program_name(dock-firmware "dock-firmware")
 pico_set_program_version(dock-firmware "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
