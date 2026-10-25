@@ -118,12 +118,16 @@ impl Handheld {
                 log::info!("-> FW    : {:08X}", fw_version);
 
                 // Send the Dock device info.
-                let mut data = [0u8; 16];
+                let mut data = [0u8; 32];
                 data[4..8].copy_from_slice(&crate::info::SerialNumber::get().0.to_le_bytes());
                 data[8..12]
                     .copy_from_slice(&crate::info::HardwareVersion::get().as_u32().to_le_bytes());
                 data[12..16]
                     .copy_from_slice(&crate::info::FirmwareVersion::get().as_u32().to_le_bytes());
+                // Human-readable firmware version
+                let fw_version = env!("CARGO_PKG_VERSION");
+                data[16..32][..fw_version.len().min(16)].copy_from_slice(fw_version.as_bytes());
+
                 usb_host::handheld_control_out(REQ_DOCK_BEGIN, 0, 0, &data);
                 self.state = HandheldState::WaitForDockBegin;
             }
